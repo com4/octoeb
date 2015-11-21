@@ -45,6 +45,8 @@ contain the following ini-style configuration:
 There are three major command `start`, `qa`, and `release`. Enter
 
     $ octoeb start -h
+    $ octoeb start hotfix -h
+    $ octoeb start release -h
     $ octoeb qa -h
     $ octoeb release -h
 

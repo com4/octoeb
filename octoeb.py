@@ -94,6 +94,13 @@ def extract_major_version(version):
     return '.'.join(version.split('.')[:4])
 
 
+def validate_ticket_name(name):
+    if re.match(r'^EB-\d+(?:-.+)?$', name):
+        return True
+
+    raise Exception('Invalid ticket name {}'.format(name))
+
+
 class GitHubAPI(object):
 
     def __init__(self, user, token, owner, repo, *args, **kwargs):
@@ -177,28 +184,29 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def create_release_branch(self, release_name):
+    def create_branch(self, name, base_name):
         # raise an error if we can find the branch, continue if we get
         # a 404
         try:
-            self.get_branch(release_name)
+            self.get_branch(name)
         except requests.exceptions.HTTPError:
             pass
         else:
             raise Exception(
-                'Release already started. Run'
-                '\n\tgit fetch --all && get checkout {}'.format(release_name)
+                'Branch already started. Run'
+                '\n\tgit fetch --all && get checkout {}'.format(name)
             )
 
-        develop = self.get_branch('develop')
+        base = self.get_branch(base_name)
         try:
             branch_info = {
-                'ref': 'refs/heads/{}'.format(release_name),
-                'sha': develop['object']['sha']
+                'ref': 'refs/heads/{}'.format(name),
+                'sha': base['object']['sha']
             }
         except KeyError:
-            logger.error('develop repsonse: {}'.format(develop))
-            raise Exception('Could not locate the current SHA for develop')
+            logger.error('base repsonse: {}'.format(base))
+            raise Exception(
+                'Could not locate the current SHA for '.format(base_name))
 
         resp = self.post('git/refs', json=branch_info)
         try:
@@ -208,6 +216,12 @@ class GitHubAPI(object):
             raise
 
         return resp.json()
+
+    def create_release_branch(self, release_name):
+        return self.create_branch(release_name, 'develop')
+
+    def create_hotfix_branch(self, fix_name):
+        return self.create_branch(fix_name, 'master')
 
     def create_pre_release(self, release_name):
         name = 'release-{}'.format(extract_major_version(release_name))
@@ -306,8 +320,16 @@ if __name__ == '__main__':
 
     start_parser = subparsers.add_parser(
         'start', help='Start a new release')
-    start_parser.add_argument(
+    start_subparsers = start_parser.add_subparsers()
+    start_release_parser = start_subparsers.add_parser(
+        'release', help='Start a new release')
+    start_release_parser.add_argument(
         'start_ver', type=str, help='Version number to start')
+
+    start_hotfix_parser = start_subparsers.add_parser(
+        'hotfix', help='Start a new hotfix')
+    start_hotfix_parser.add_argument(
+        'start_fix', type=str, help='Ticket nuber of the bug')
 
     qa_parser = subparsers.add_parser(
         'qa', help='Create pre-release for qa')
@@ -341,10 +363,27 @@ if __name__ == '__main__':
         try:
             validate_version(args.start_ver)
             name = 'release-{}'.format(extract_major_version(args.start_ver))
-            api.create_release_branch(name)
-            sys.exit()
+            branch = api.create_release_branch(name)
         except Exception as e:
             sys.exit(e.message)
+
+        print 'Branch: {} created'.format(name)
+        print branch.get('url')
+        print '\tgit fetch --all && git checkout {}'.format(name)
+        sys.exit()
+
+    if 'start_fix' in args:
+        try:
+            validate_ticket_name(args.start_fix)
+            name = 'hotfix-{}'.format(extract_major_version(args.start_fix))
+            branch = api.create_hotfix_branch(name)
+        except Exception as e:
+            sys.exit(e.message)
+
+        print 'Branch: {} created'.format(name)
+        print branch.get('url')
+        print '\tgit fetch --all && git checkout {}'.format(name)
+        sys.exit()
 
     if 'qa_ver' in args:
         try:
