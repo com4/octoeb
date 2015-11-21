@@ -34,11 +34,11 @@ contain the following ini-style configuration:
     USER=email@test.com
 
 
-1) OWNER and REPO are https://github.com/OWNER/REPO when you vist a repo on
+1. OWNER and REPO are https://github.com/OWNER/REPO when you vist a repo on
    GitHub, so for example https://github.com/enderlabs/eventboard.io gives
    OWNER=enderlabs and REPO=eventboard.io
-2) The token can be obtained from https://github.com/settings/tokens
-3) USER is your login email for GitHub
+2. The token can be obtained from https://github.com/settings/tokens
+3. USER is your login email for GitHub
 
 
 ## Usage
