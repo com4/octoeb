@@ -319,15 +319,15 @@ if __name__ == '__main__':
         'method_args', nargs='*', help='method arguments')
 
     start_parser = subparsers.add_parser(
-        'start', help='Start a new release')
+        'start', help='Start a new release branch')
     start_subparsers = start_parser.add_subparsers()
     start_release_parser = start_subparsers.add_parser(
-        'release', help='Start a new release')
+        'release', help='Start a new release branch')
     start_release_parser.add_argument(
         'start_ver', type=str, help='Version number to start')
 
     start_hotfix_parser = start_subparsers.add_parser(
-        'hotfix', help='Start a new hotfix')
+        'hotfix', help='Start a new hotfix branch')
     start_hotfix_parser.add_argument(
         'start_fix', type=str, help='Ticket nuber of the bug')
 
