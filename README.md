@@ -17,6 +17,14 @@ To verify the install, start a new shell and run
     octoeb --help
 
 
+## Developing
+Install the package using
+
+    pip install --editable .
+
+Start coding!
+
+
 ## Configuration
 The script looks for the file `.octoebrc` in either the current directory or
 your home directory.  You can also place the config in `~/.config/octoeb`.  We

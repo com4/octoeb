@@ -57,12 +57,15 @@ import click
 
 
 from octoeb.utils.formatting import extract_major_version
+from octoeb.utils.formatting import validate_config
 from octoeb.utils.GitHubAPI import GitHubAPI
 
 
 logger = logging.getLogger(__name__)
 # Allow commands to access the api object via the clikc ctx
 pass_api = click.make_pass_decorator(GitHubAPI)
+# use to allow -h for for help
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 def set_logging(ctx, param, level):
@@ -93,31 +96,45 @@ def validate_ticket_arg(ctx, param, name):
     raise click.BadParameter('Invalid ticket format {}'.format(name))
 
 
-@click.group()
+@click.group(context_settings=CONTEXT_SETTINGS)
 @click.option(
     '--log',
     default='ERROR', help='Set the log level',
     expose_value=False,
     callback=set_logging,
     type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']))
-@click.version_option('1.0')
+@click.version_option('1.2')
 @click.pass_context
 def cli(ctx):
     """Eventboard releases script"""
     # Setup the API
     config = ConfigParser.ConfigParser()
     config.read(['.octoebrc', '~/.config/octoeb', '~/.octoebrc'])
-    ctx.obj = GitHubAPI(
-        config.get('repo', 'USER'),
-        config.get('repo', 'TOKEN'),
-        config.get('repo', 'OWNER'),
-        config.get('repo', 'REPO')
-    )
+
+    try:
+        validate_config(config)
+    except Exception as e:
+        sys.exit('ERROR: {}'.format(e.message))
+
+    ctx.obj = {
+        'mainline': GitHubAPI(
+            config.get('repo', 'USER'),
+            config.get('repo', 'TOKEN'),
+            config.get('repo', 'OWNER'),
+            config.get('repo', 'REPO')
+        ),
+        'fork': GitHubAPI(
+            config.get('repo', 'USER'),
+            config.get('repo', 'TOKEN'),
+            config.get('repo', 'FORK'),
+            config.get('repo', 'REPO')
+        ),
+    }
 
 
 @cli.group()
-@pass_api
-def start(api):
+@click.pass_obj
+def start(apis):
     """Start new branch for a fix, feature, or a new release"""
     pass
 
@@ -127,9 +144,10 @@ def start(api):
     '-v', '--version',
     callback=validate_version_arg,
     help='Major version number of the release to start')
-@pass_api
-def start_release(api, version):
+@click.pass_obj
+def start_release(apis, version):
     """Start new version branch"""
+    api = apis.get('mainline')
     try:
         name = 'release-{}'.format(extract_major_version(version))
         branch = api.create_release_branch(name)
@@ -147,9 +165,10 @@ def start_release(api, version):
     '-t', '--ticket',
     callback=validate_ticket_arg,
     help='Name of ticket reporting the bug to be fixed')
-@pass_api
-def start_hotfix(api, ticket):
+@click.pass_obj
+def start_hotfix(apis, ticket):
     """Start new hotfix branch"""
+    api = apis.get('fork')
     try:
         name = 'hotfix-{}'.format(extract_major_version(ticket))
         branch = api.create_hotfix_branch(name)
@@ -171,9 +190,10 @@ def start_hotfix(api, ticket):
     '-t', '--ticket',
     callback=validate_ticket_arg,
     help='Name of ticket reporting the bug to be fixed')
-@pass_api
-def start_releasefix(api, version, ticket):
+@click.pass_obj
+def start_releasefix(apis, version, ticket):
     """Start new hotfix for a pre-release"""
+    api = apis.get('fork')
     try:
         name = 'releasefix-{}'.format(extract_major_version(ticket))
         branch = api.create_hotfix_branch(
@@ -194,9 +214,10 @@ def start_releasefix(api, version, ticket):
     '-t', '--ticket',
     callback=validate_ticket_arg,
     help='Name of ticket reporting the feature to implement')
-@pass_api
-def start_feature(api, ticket):
+@click.pass_obj
+def start_feature(apis, ticket):
     """Start new feature branch"""
+    api = apis.get('fork')
     name = 'feature-{}'.format(ticket)
     try:
         branch = api.create_feature_branch(name)
@@ -214,9 +235,10 @@ def start_feature(api, ticket):
     '-v', '--version',
     callback=validate_version_arg,
     help='Full version number of the release to QA (pre-release)')
-@pass_api
-def qa(api, version):
+@click.pass_obj
+def qa(apis, version):
     """Publish pre-release on GitHub for QA"""
+    api = apis.get('mainline')
     try:
         api.create_pre_release(version)
         sys.exit()
@@ -229,9 +251,10 @@ def qa(api, version):
     '-v', '--version',
     callback=validate_version_arg,
     help='Full version number of the release to publish')
-@pass_api
-def release(api, version):
+@click.pass_obj
+def release(apis, version):
     """Publish release on GitHub"""
+    api = apis.get('mainline')
     try:
         api.create_release(version)
         sys.exit()
@@ -241,6 +264,11 @@ def release(api, version):
 
 @cli.command('method')
 @click.option(
+    '-t', '--target',
+    help='Repo to target',
+    type=click.Choice(['mainline', 'fork'])
+)
+@click.option(
     '-m', '--name', 'method_name',
     help='GitHubAPI method to call'
 )
@@ -249,9 +277,10 @@ def release(api, version):
     multiple=True,
     help='GitHubAPI method arguments'
 )
-@pass_api
-def call_method(api, method_name, method_args):
+@click.pass_obj
+def call_method(apis, target, method_name, method_args):
     """Call GitHubAPI directly"""
+    api = apis.get(target)
     try:
         click.echo(getattr(api, method_name)(*method_args))
         sys.exit()

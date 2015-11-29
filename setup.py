@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='octoeb',
-    version='1.0',
-    packages=['octoeb', 'octoeb.utils', ],
+    version='1.2',
+    packages=find_packages(),
     include_package_data=True,
     install_requires=[
         'click',
