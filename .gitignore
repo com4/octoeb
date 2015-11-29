@@ -1,2 +1,3 @@
 .octoebrc
 octoeb.egg-info
+*.pyc
