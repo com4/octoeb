@@ -14,6 +14,8 @@ class GitHubAPI(object):
     def __init__(self, user, token, owner, repo, *args, **kwargs):
         self.user = user
         self.token = token
+        self.owner = owner
+        self.repo = repo
         self.base = 'https://api.github.com/repos/{}/{}/'.format(owner, repo)
 
     def build_path(self, path):
@@ -136,6 +138,30 @@ class GitHubAPI(object):
 
     def create_feature_branch(self, feature_name):
         return self.create_branch(feature_name, 'develop')
+
+    def create_pull_request(self, base, head):
+        """Create a new pull request
+
+        Arguments:
+            base (str): name of the branch where your changes are implemented.
+                For cross-repository pull requests in the same network,
+                namespace head with a user like this: username:branch
+            head (str): name of the branch you want your changes pulled into.
+        """
+        pull_info = {
+            'head': head,
+            'base': base
+        }
+        logger.info(pull_info)
+
+        resp = self.post('pulls', json=pull_info)
+        try:
+            resp.raise_for_status()
+        except Exception:
+            logger.error(resp.json())
+            raise
+
+        return resp.json()
 
     def create_pre_release(self, release_name):
         name = 'release-{}'.format(extract_major_version(release_name))

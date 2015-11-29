@@ -230,6 +230,79 @@ def start_feature(apis, ticket):
     sys.exit()
 
 
+@cli.group()
+@click.pass_obj
+def review(apis):
+    """Create PR to review your code"""
+    pass
+
+
+@review.command('feature')
+@click.option(
+    '-t', '--ticket',
+    callback=validate_ticket_arg,
+    help='Feature branch / ticket name')
+@click.pass_obj
+def review_feature(apis, ticket):
+    """Create PR for a feature branch"""
+    api = apis.get('mainline')
+    fork = apis.get('fork')
+    name = '{}:feature-{}'.format(fork.owner, ticket)
+
+    try:
+        resp = api.create_pull_request('develop', name)
+        click.launch(resp.get('html_url'))
+        sys.exit()
+    except Exception as e:
+        sys.exit(e.message)
+
+
+@review.command('hotfix')
+@click.option(
+    '-t', '--ticket',
+    callback=validate_ticket_arg,
+    help='Hotfix branch / ticket name')
+@click.pass_obj
+def review_hotfix(apis, ticket):
+    """Create PR for a hotfix branch"""
+    api = apis.get('mainline')
+    fork = apis.get('fork')
+    name = '{}:hotfix-{}'.format(fork.owner, ticket)
+
+    try:
+        resp = api.create_pull_request('master', name)
+        click.launch(resp.get('html_url'))
+        sys.exit()
+    except Exception as e:
+        sys.exit(e.message)
+
+
+@review.command('releasefix')
+@click.option(
+    '-v', '--version',
+    callback=validate_version_arg,
+    help='Major version number of the release to fix')
+@click.option(
+    '-t', '--ticket',
+    callback=validate_ticket_arg,
+    help='Feature branch / ticket name')
+@click.pass_obj
+def review_releasefix(apis, ticket, version):
+    """Create PR for a release bugfix branch"""
+    api = apis.get('mainline')
+    fork = apis.get('fork')
+
+    try:
+        resp = api.create_pull_request(
+            'release-{}'.format(version),
+            '{}:releasefix-{}'.format(fork.owner, ticket)
+        )
+        click.launch(resp.get('html_url'))
+        sys.exit()
+    except Exception as e:
+        sys.exit(e.message)
+
+
 @cli.command()
 @click.option(
     '-v', '--version',
