@@ -50,6 +50,18 @@ expect this file to contain the following ini-style configuration:
 2. The token can be obtained from https://github.com/settings/tokens
 3. USER is your login email for GitHub
 
+## Tab Completion
+To add tab completion in `bash` simply add
+
+    source /path/to/octoeb/completion.sh
+
+to your `bashrc`.
+
+If you are running `zsh`, then you must also add
+
+    autoload -U +X bashcompinit && bashcompinit
+
+to the beginning of your `zshrc`.
 
 ## Usage
 There are three major command `start`, `qa`, and `release`. Enter
