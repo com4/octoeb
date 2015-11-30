@@ -38,6 +38,11 @@ expect this file to contain the following ini-style configuration:
     TOKEN=oauth-token
     USER=email@test.com
 
+    [bugtracker]
+    BASE_URL=https://example.atlassian.net
+    USER=email@example.com
+    TOKEN=pwd
+
 
 1. OWNER and REPO are https://github.com/OWNER/REPO when you visit a repo on
    GitHub, so for example https://github.com/enderlabs/eventboard.io gives
