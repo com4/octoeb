@@ -59,6 +59,7 @@ import click
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
 from octoeb.utils.GitHubAPI import GitHubAPI
+from octoeb.utils.JiraAPI import JiraAPI
 
 
 logger = logging.getLogger(__name__)
@@ -87,10 +88,11 @@ def validate_version_arg(ctx, param, version):
 
 
 def validate_ticket_arg(ctx, param, name):
+    """Verify issue id format and return issue slug"""
     if name is None:
         raise click.BadParameter('Ticket number is required')
 
-    if re.match(r'^EB-\d+(?:-.+)?$', name):
+    if re.match(r'^EB-\d+', name):
         return name
 
     raise click.BadParameter('Invalid ticket format {}'.format(name))
@@ -129,6 +131,12 @@ def cli(ctx):
             config.get('repo', 'FORK'),
             config.get('repo', 'REPO')
         ),
+        'jira': JiraAPI(
+            config.get('bugtracker', 'BASE_URL'),
+            config.get('bugtracker', 'USER'),
+            config.get('bugtracker', 'TOKEN'),
+            config.items('bugtracker')
+        )
     }
 
 
@@ -164,13 +172,14 @@ def start_release(apis, version):
 @click.option(
     '-t', '--ticket',
     callback=validate_ticket_arg,
-    help='Name of ticket reporting the bug to be fixed')
+    help='ID of ticket reporting the bug to be fixed, slug will be generated')
 @click.pass_obj
 def start_hotfix(apis, ticket):
     """Start new hotfix branch"""
     api = apis.get('fork')
+    jira = apis.get('jira')
     try:
-        name = 'hotfix-{}'.format(extract_major_version(ticket))
+        name = 'hotfix-{}'.format(jira.get_issue_slug(ticket))
         branch = api.create_hotfix_branch(name)
     except Exception as e:
         sys.exit(e.message)
@@ -189,13 +198,14 @@ def start_hotfix(apis, ticket):
 @click.option(
     '-t', '--ticket',
     callback=validate_ticket_arg,
-    help='Name of ticket reporting the bug to be fixed')
+    help='ID of ticket reporting the bug to be fixed, slug will be generated')
 @click.pass_obj
 def start_releasefix(apis, version, ticket):
     """Start new hotfix for a pre-release"""
     api = apis.get('fork')
+    jira = apis.get('jira')
     try:
-        name = 'releasefix-{}'.format(extract_major_version(ticket))
+        name = 'releasefix-{}'.format(jira.get_issue_slug(ticket))
         branch = api.create_hotfix_branch(
             name,
             'release-{}'.format(extract_major_version(version))
@@ -213,13 +223,14 @@ def start_releasefix(apis, version, ticket):
 @click.option(
     '-t', '--ticket',
     callback=validate_ticket_arg,
-    help='Name of ticket reporting the feature to implement')
+    help='ID of ticket defining the feature, slug will be generated')
 @click.pass_obj
 def start_feature(apis, ticket):
     """Start new feature branch"""
     api = apis.get('fork')
-    name = 'feature-{}'.format(ticket)
+    jira = apis.get('jira')
     try:
+        name = 'feature-{}'.format(jira.get_issue_slug(ticket))
         branch = api.create_feature_branch(name)
     except Exception as e:
         sys.exit(e.message)
@@ -247,9 +258,10 @@ def review_feature(apis, ticket):
     """Create PR for a feature branch"""
     api = apis.get('mainline')
     fork = apis.get('fork')
-    name = '{}:feature-{}'.format(fork.owner, ticket)
+    jira = apis.get('jira')
 
     try:
+        name = '{}:feature-{}'.format(fork.owner, jira.get_issue_slug(ticket))
         resp = api.create_pull_request('develop', name)
         click.launch(resp.get('html_url'))
         sys.exit()
@@ -267,9 +279,10 @@ def review_hotfix(apis, ticket):
     """Create PR for a hotfix branch"""
     api = apis.get('mainline')
     fork = apis.get('fork')
-    name = '{}:hotfix-{}'.format(fork.owner, ticket)
+    jira = apis.get('jira')
 
     try:
+        name = '{}:hotfix-{}'.format(fork.owner, jira.get_issue_slug(ticket))
         resp = api.create_pull_request('master', name)
         click.launch(resp.get('html_url'))
         sys.exit()
@@ -291,11 +304,12 @@ def review_releasefix(apis, ticket, version):
     """Create PR for a release bugfix branch"""
     api = apis.get('mainline')
     fork = apis.get('fork')
+    jira = apis.get('jira')
 
     try:
         resp = api.create_pull_request(
             'release-{}'.format(version),
-            '{}:releasefix-{}'.format(fork.owner, ticket)
+            '{}:releasefix-{}'.format(fork.owner, jira.get_issue_slug(ticket))
         )
         click.launch(resp.get('html_url'))
         sys.exit()
@@ -360,6 +374,26 @@ def call_method(apis, target, method_name, method_args):
     except Exception as e:
         sys.exit(e.message)
 
+
+@cli.command('jira')
+@click.option(
+    '-m', '--name', 'method_name',
+    help='GitHubAPI method to call'
+)
+@click.option(
+    '-a', '--args', 'method_args',
+    multiple=True,
+    help='GitHubAPI method arguments'
+)
+@click.pass_obj
+def call_jira_method(apis, method_name, method_args):
+    """Call JiraAPI mehtod directly"""
+    jira = apis.get('jira')
+    try:
+        click.echo(getattr(jira, method_name)(*method_args))
+        sys.exit()
+    except Exception as e:
+        sys.exit(e.message)
 
 if __name__ == '__main__':
     cli()

@@ -9,6 +9,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'click',
+        'python-slugify',
         'requests',
     ],
     entry_points={
