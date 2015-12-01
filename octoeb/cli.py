@@ -50,6 +50,7 @@ respectively for usage details.
 from __future__ import absolute_import
 import ConfigParser
 import logging
+import os
 import re
 import sys
 
@@ -111,7 +112,11 @@ def cli(ctx):
     """Eventboard releases script"""
     # Setup the API
     config = ConfigParser.ConfigParser()
-    config.read(['.octoebrc', '~/.config/octoeb', '~/.octoebrc'])
+    config.read([
+        '.octoebrc',
+        os.path.expanduser('~/.config/octoeb'),
+        os.path.expanduser('~/.octoebrc')
+        ])
 
     try:
         validate_config(config)
