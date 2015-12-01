@@ -9,7 +9,12 @@ from octoeb.utils.formatting import extract_major_version
 logger = logging.getLogger(__name__)
 
 
+class DuplicateBranchError(Exception):
+    pass
+
+
 class GitHubAPI(object):
+    DuplicateBranchError = DuplicateBranchError
 
     def __init__(self, user, token, owner, repo, *args, **kwargs):
         self.user = user
@@ -102,7 +107,7 @@ class GitHubAPI(object):
         except requests.exceptions.HTTPError:
             pass
         else:
-            raise Exception(
+            raise DuplicateBranchError(
                 'Branch already started. Run'
                 '\n\tgit fetch --all && get checkout {}'.format(name)
             )

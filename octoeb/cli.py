@@ -58,6 +58,7 @@ import click
 
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
+from octoeb.utils import git
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
 
@@ -92,7 +93,7 @@ def validate_ticket_arg(ctx, param, name):
     if name is None:
         raise click.BadParameter('Ticket number is required')
 
-    if re.match(r'^EB-\d+', name):
+    if re.match(r'^[a-zA-Z]+-\d+', name):
         return name
 
     raise click.BadParameter('Invalid ticket format {}'.format(name))
@@ -159,6 +160,10 @@ def start_release(apis, version):
     try:
         name = 'release-{}'.format(extract_major_version(version))
         branch = api.create_release_branch(name)
+    except GitHubAPI.DuplicateBranchError as e:
+        git.fetch('mainline')
+        git.checkout(name)
+        sys.exit('Branch already started')
     except Exception as e:
         sys.exit(e.message)
 
@@ -181,6 +186,10 @@ def start_hotfix(apis, ticket):
     try:
         name = 'hotfix-{}'.format(jira.get_issue_slug(ticket))
         branch = api.create_hotfix_branch(name)
+    except GitHubAPI.DuplicateBranchError as e:
+        git.fetch('origin')
+        git.checkout(name)
+        sys.exit('Branch already started')
     except Exception as e:
         sys.exit(e.message)
 
@@ -210,6 +219,10 @@ def start_releasefix(apis, version, ticket):
             name,
             'release-{}'.format(extract_major_version(version))
         )
+    except GitHubAPI.DuplicateBranchError as e:
+        git.fetch('origin')
+        git.checkout(name)
+        sys.exit('Branch already started')
     except Exception as e:
         sys.exit(e.message)
 
@@ -232,12 +245,18 @@ def start_feature(apis, ticket):
     try:
         name = 'feature-{}'.format(jira.get_issue_slug(ticket))
         branch = api.create_feature_branch(name)
+    except GitHubAPI.DuplicateBranchError as e:
+        git.fetch('origin')
+        git.checkout(name)
+        sys.exit('Branch already started')
     except Exception as e:
         sys.exit(e.message)
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
     click.echo('\tgit fetch --all && git checkout {}'.format(name))
+    git.fetch('origin')
+    git.checkout(name)
     sys.exit()
 
 
