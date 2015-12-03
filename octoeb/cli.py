@@ -62,7 +62,6 @@ import sys
 
 import click
 
-
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
 from octoeb.utils import git
@@ -71,6 +70,7 @@ from octoeb.utils.JiraAPI import JiraAPI
 
 
 logger = logging.getLogger(__name__)
+click.disable_unicode_literals_warning = True
 # Allow commands to access the api object via the clikc ctx
 pass_api = click.make_pass_decorator(GitHubAPI)
 # use to allow -h for for help
@@ -123,7 +123,7 @@ def cli(ctx):
         '.octoebrc',
         os.path.expanduser('~/.config/octoeb'),
         os.path.expanduser('~/.octoebrc')
-        ])
+    ])
 
     try:
         validate_config(config)
