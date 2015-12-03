@@ -2,7 +2,11 @@
 JIRA API wrapper object.
 """
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 import logging
+import re
 
 import requests
 from slugify import slugify
@@ -125,3 +129,23 @@ class JiraAPI(object):
 
         issue = self.get_issue(id)
         return '{}-{}'.format(id, slugify(issue.get('fields').get('summary')))
+
+    def get_release_notes(self, version_id, project_id):
+
+        path = (
+            '{}secure/ReleaseNote.jspa?version={}&styleName=Text&projectId={}'
+        ).format('https://eventboard.atlassian.net/', version_id, project_id)
+
+        resp = requests.get(path, auth=self.auth)
+
+        notes = re.findall(
+            r'<textarea rows="40" cols="120">(.*)</textarea>',
+            resp.content,
+            re.S | re.M
+        )[0]
+
+        # convert the notes to markdown for the github release description
+        notes = re.sub(r'\n{2,}', '\n\n', notes)
+        notes = re.sub(r'\s+\*\*\s', '\n\n#### ', notes)
+        notes = re.sub(r'\s+\*\s', '\n* ', notes)
+        return notes

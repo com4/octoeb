@@ -48,7 +48,13 @@ respectively for usage details.
 
 # import argparse
 from __future__ import absolute_import
-import ConfigParser
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 import logging
 import os
 import re

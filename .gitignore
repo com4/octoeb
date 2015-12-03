@@ -3,3 +3,4 @@ octoeb.egg-info
 *.pyc
 build/
 dist/
+.env

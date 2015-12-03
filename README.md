@@ -1,5 +1,6 @@
 OctoEB
 ======
+![python3](https://caniusepython3.com/check/c87b915f-dfb4-42eb-b0f2-ed5790a049ec.svg?style=flat)
 
 OctoEB is a script to help with the creation of GitHub releases for Eventboard
 projects.  This is to help us avoid merge, branch, and tag issues. It also

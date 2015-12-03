@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 import logging
 
 import requests
@@ -168,7 +171,7 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def create_pre_release(self, release_name):
+    def create_pre_release(self, release_name, body=""):
         name = 'release-{}'.format(extract_major_version(release_name))
         release_branch = self.get_branch(name)
 
@@ -186,7 +189,7 @@ class GitHubAPI(object):
                 "tag_name": release_name,
                 "target_commitish": release_branch['object']['sha'],
                 "name": 'release-{}'.format(release_name),
-                "body": "",
+                "body": body,
                 "draft": False,
                 "prerelease": True
             }
@@ -203,7 +206,7 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def create_release(self, release_name):
+    def create_release(self, release_name, body=""):
 
         # maybe we should just trying merging the branches
         # https://developer.github.com/v3/repos/merging/
@@ -233,7 +236,7 @@ class GitHubAPI(object):
                 "tag_name": release_name,
                 "target_commitish": master['object']['sha'],
                 "name": 'release-{}'.format(release_name),
-                "body": "",
+                "body": body,
                 "draft": False,
                 "prerelease": False
             }
