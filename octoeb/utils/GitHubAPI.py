@@ -29,10 +29,11 @@ class GitHubAPI(object):
     def build_path(self, path):
         url = '{}{}'.format(self.base, path)
 
-        logger.debug(url)
+        logger.debug('GitHubAPI.build_path: {}'.format(url))
         return url
 
     def get(self, path):
+        logger.debug('GitHubAPI.get: {}'.format(path))
         return requests.get(
             self.build_path(path),
             auth=(self.user, self.token)
@@ -103,6 +104,11 @@ class GitHubAPI(object):
         return resp.json()
 
     def create_branch(self, name, base_name):
+        logger.debug(
+            'GitHubAPI.create_branch: name={}, base_name={}'.format(
+                name, base_name
+            )
+        )
         # raise an error if we can find the branch, continue if we get
         # a 404
         try:

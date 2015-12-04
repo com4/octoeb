@@ -33,7 +33,7 @@ class JiraAPI(object):
         """
         url = '{}{}'.format(self.base, path)
 
-        logger.debug(url)
+        logger.debug('JiraAPI.build_path: {}'.foramt(url))
         return url
 
     def get_issue(self, id, raise_for_status=True):
@@ -50,6 +50,11 @@ class JiraAPI(object):
         Raises:
 
         """
+        logger.debug(
+            'JiraAPI.get_issue: id={}, raise_for_status={}'.format(
+                id, raise_for_status
+            )
+        )
         endpoint = 'issue/{}'.format(id)
         resp = requests.get(self.build_path(endpoint), auth=self.auth)
 
@@ -67,6 +72,11 @@ class JiraAPI(object):
         Returns:
             bool
         """
+        logger.debug(
+            'JiraAPI.check_for_issue: id={}, raise_for_status={}'.format(
+                id, raise_for_status
+            )
+        )
         endpoint = 'issue/{}'.format(id)
         resp = requests.get(self.build_path(endpoint), auth=self.auth)
 
@@ -86,6 +96,12 @@ class JiraAPI(object):
             subcategory (int): Target status subcategory id.
                 2 = To Do, 4 = In Progress
         """
+        logger.debug(
+            'JiraAPI.get_open_transitions: '
+            'id={}, subcategory={}, raise_for_status={}'.format(
+                id, subcategory, raise_for_status
+            )
+        )
         # get list of possible transitions
         endpoint = 'issue/{}/transitions'.format(id)
         resp = requests.get(self.build_path(endpoint), auth=self.auth)
@@ -113,6 +129,12 @@ class JiraAPI(object):
                 'id': 21
             }
         }
+        logger.debug(
+            'JiraAPI.start_issue: id={}, raise_for_status={}'.format(
+                id, raise_for_status
+            )
+        )
+        logger.debug('payload: {}'.format(payload))
         resp = requests.post(
             self.build_path(endpoint), json=payload, auth=self.auth
         )
@@ -126,12 +148,12 @@ class JiraAPI(object):
         return None
 
     def get_issue_slug(self, id):
-
+        logger.debug('JiraAPI.get_issue_slug')
         issue = self.get_issue(id)
         return '{}-{}'.format(id, slugify(issue.get('fields').get('summary')))
 
     def get_release_notes(self, version_id, project_id):
-
+        logger.debug('JiraAPI.get_release_notes')
         path = (
             '{}secure/ReleaseNote.jspa?version={}&styleName=Text&projectId={}'
         ).format('https://eventboard.atlassian.net/', version_id, project_id)
