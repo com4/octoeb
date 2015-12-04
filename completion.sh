@@ -1,8 +1,48 @@
 _octoeb_completion() {
-    COMPREPLY=( $( env COMP_WORDS="${COMP_WORDS[*]}" \
-                   COMP_CWORD=$COMP_CWORD \
-                   _OCTOEB_COMPLETE=complete $1 ) )
-    return 0
+    local cur prev
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+
+    case ${COMP_CWORD} in
+        1)
+            COMPREPLY=($(compgen -W "start review qa release jira method" ${cur}))
+            ;;
+        2)
+            case ${prev} in
+                start)
+                    COMPREPLY=($(compgen -W "feature hotfix releasefix release" ${cur}))
+                    ;;
+                review)
+                    COMPREPLY=($(compgen -W "feature hotfix releasefix" ${cur}))
+                    ;;
+                qa)
+                    COMPREPLY=($(compgen -W "-v" ${cur}))
+                    ;;
+                release)
+                    COMPREPLY=($(compgen -W "-v" ${cur}))
+                    ;;
+                jira)
+                    COMPREPLY=()
+                    ;;
+                method)
+                    COMPREPLY=()
+                    ;;
+                esac
+                ;;
+        3)
+            case ${prev} in
+                feature|hotfix|releasefix)
+                    COMPREPLY=($(compgen -W "-t" ${cur}))
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+                esac
+                ;;
+        *)
+            COMPREPLY=()
+            ;;
+        esac
 }
 
 complete -F _octoeb_completion -o default octoeb;
