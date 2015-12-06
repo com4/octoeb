@@ -33,8 +33,35 @@ class JiraAPI(object):
         """
         url = '{}{}'.format(self.base, path)
 
-        logger.debug('JiraAPI.build_path: {}'.foramt(url))
+        logger.debug('JiraAPI.build_path: {}'.format(url))
         return url
+
+    def get(self, path, raise_for_status=True, **kwargs):
+        """Get path from JIRA"""
+        logger.debug('JiraAPI.get: {}'.format(path))
+        resp = requests.get(self.build_path(path), auth=self.auth, **kwargs)
+
+        logger.debug(resp)
+
+        if raise_for_status:
+            resp.raise_for_status()
+
+        return resp.json()
+
+    def post(self, path, raise_for_status=True, **kwargs):
+        """POST to path on JIRA"""
+        logger.debug('JiraAPI.post: path={}, kwargs={}'.format(kwargs))
+
+        resp = requests.post(
+            self.build_path(path), auth=self.auth, **kwargs
+        )
+
+        logger.debug(resp)
+
+        if raise_for_status:
+            resp.raise_for_status()
+
+        return resp.json()
 
     def get_issue(self, id, raise_for_status=True):
         """Returns ticket JSON
@@ -56,12 +83,37 @@ class JiraAPI(object):
             )
         )
         endpoint = 'issue/{}'.format(id)
-        resp = requests.get(self.build_path(endpoint), auth=self.auth)
+        return self.get(endpoint, raise_for_status)
 
-        if raise_for_status:
-            resp.raise_for_status()
+    def get_filter(self, id, raise_for_status=True):
+        """Get JIRA filter definition"""
 
-        return resp.json()
+        logger.debug(
+            'JiraAPI.get_filter: id={}, raise_for_status={}'.format(
+                id, raise_for_status
+            )
+        )
+
+        return self.get(
+            'filter/{}'.format(id), raise_for_status=raise_for_status)
+
+    def get_my_tickets(self):
+        filter_id = self.config.get('ticket_filter_id', None)
+        logger.debug('JiraAPI.get_my_tickets: filter_id={}'.format(filter_id))
+
+        if filter_id is None:
+            return []
+
+        filter_instance = self.get_filter(filter_id)
+
+        return self.get('search', params={'jql': filter_instance.get('jql')})\
+                   .get('issues')
+
+    def get_my_ticket_ids(self):
+        """Return string for TAB completion of ticket ids"""
+        tickets = self.get_my_tickets()
+
+        return ' '.join(x.get('key') for x in tickets)
 
     def check_for_issue(self, id, raise_for_status=True):
         """Verify if issue `id` exists
@@ -78,12 +130,10 @@ class JiraAPI(object):
             )
         )
         endpoint = 'issue/{}'.format(id)
-        resp = requests.get(self.build_path(endpoint), auth=self.auth)
 
-        if raise_for_status:
-            resp.raise_for_status()
+        resp = self.get(endpoint)
 
-        if resp.status_code == 200:
+        if resp:
             return True
 
         return False
@@ -104,13 +154,10 @@ class JiraAPI(object):
         )
         # get list of possible transitions
         endpoint = 'issue/{}/transitions'.format(id)
-        resp = requests.get(self.build_path(endpoint), auth=self.auth)
+        resp = self.get(endpoint)
         logger.debug(resp)
 
-        if raise_for_status:
-            resp.raise_for_status()
-
-        transitions = resp.json().get('transitions')
+        transitions = resp.get('transitions')
 
         in_progress_transitions = [
             (x.get('name'), x.get('id')) for x in transitions
@@ -135,17 +182,16 @@ class JiraAPI(object):
             )
         )
         logger.debug('payload: {}'.format(payload))
-        resp = requests.post(
-            self.build_path(endpoint), json=payload, auth=self.auth
-        )
-
-        logger.debug(payload)
-        logger.debug(resp)
+        resp = self.post(endpoint, json=payload)
 
         if raise_for_status:
             resp.raise_for_status()
 
         return None
+
+    def get_status_categories(self):
+        logger.debug('JiraAPI.get_status_categories')
+        return self.get('statuscategory')
 
     def get_issue_slug(self, id):
         logger.debug('JiraAPI.get_issue_slug')
@@ -166,7 +212,8 @@ class JiraAPI(object):
             re.S | re.M
         )[0]
 
-        # convert the notes to markdown for the github release description
+        # convert  JIRA text markup to Markdown for the github release
+        # description
         notes = re.sub(r'\n{2,}', '\n\n', notes)
         notes = re.sub(r'\s+\*\*\s', '\n\n#### ', notes)
         notes = re.sub(r'\s+\*\s', '\n* ', notes)
