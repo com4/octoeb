@@ -58,6 +58,7 @@ except ImportError:
 import logging
 import os
 import re
+import subprocess
 import sys
 
 import click
@@ -150,6 +151,52 @@ def cli(ctx):
             config.items('bugtracker')
         )
     }
+
+
+@cli.command()
+@click.pass_obj
+def sync(apis):
+    """Sync fork with mainline
+
+    Checkout each core branch (master and develop), pull from `mainline`, then
+    push to the origin (the fork).
+
+    Returns:
+        None
+    """
+    # TODO: It would be nice if the master and develop branch names where
+    #       configurable.  In fact, it would be good if we could do this for
+    #       more branches.
+    logger.debug('stashing current branch')
+    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = stash_ref.strip()
+
+    if stash_ref:
+        logger.debug('stash_ref: {}'.format(stash_ref))
+        subprocess.call(['git', 'stash', 'store', '-q', stash_ref])
+        subprocess.call(['git', 'reset', '--hard'])
+
+    try:
+        org_branch = subprocess.check_output([
+            'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+        ])
+        org_branch = org_branch.strip()
+        logger.debug('current branch name: {}'.format(org_branch))
+
+        # sync each core branch
+        for x in ('master', 'develop'):
+            logger.debug('syncing {}'.format(x))
+            subprocess.call(['git', 'checkout', '-q', x])
+            subprocess.call(['git', 'pull', '-q', 'mainline', x])
+            subprocess.call(['git', 'push', 'origin', x])
+
+        logger.debug('checkout the original branch: {}'.format(org_branch))
+        subprocess.call(['git', 'checkout', '-q', org_branch])
+    finally:
+        if stash_ref:
+            subprocess.call(['git', 'stash', 'pop', '-q'])
+
+    sys.exit()
 
 
 @cli.group()
