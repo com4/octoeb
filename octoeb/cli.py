@@ -199,6 +199,87 @@ def sync(apis):
     sys.exit()
 
 
+@cli.command()
+@click.option(
+    '-b', '--base',
+    help='Set the base branch to update from',
+)
+@click.pass_obj
+def update(apis, base):
+    """Update local branch from the upstream base
+
+    Rebase the local branch with any changes from the upstream copy of the base
+    branch.  That is, for example, if the current branch is
+
+        feature-EB-123-abc
+
+    Then the base branch is `develop` and the `update` command is equivalent
+    to
+
+        $ git stash
+
+        $ git pull -r mainline develop
+
+        $ git push -f origin feature-EB-123
+
+        $ git stash pop
+
+    Returns:
+        None
+    """
+    # get the current branch name
+    current_branch = subprocess.check_output([
+        'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+    ])
+    current_branch = current_branch.strip()
+    logger.debug('current branch: {}'.format(current_branch))
+
+    # try to detect if branch is hotfix, releasefix, feature, or a release
+    branch_type = current_branch.split('-')[0]
+    BRANCH_TYPE_UPDATE_MAP = {
+        'hotfix': 'master',
+        'feature': 'develop',
+    }
+
+    if branch_type not in BRANCH_TYPE_UPDATE_MAP and not base:
+        sys.exit(
+            'We can not determine the base branch to be used,'
+            ' supply a --base value to continue.'
+        )
+
+    base_branch = base or BRANCH_TYPE_UPDATE_MAP.get(branch_type)
+    logger.debug('Base branch determined as: {}'.format(base_branch))
+
+    logger.debug('stashing current branch')
+    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = stash_ref.strip()
+
+    if stash_ref:
+        logger.debug('stash_ref: {}'.format(stash_ref))
+        subprocess.call(['git', 'stash', 'store', '-q', stash_ref])
+        subprocess.call(['git', 'reset', '--hard'])
+
+    try:
+        logger.debug('Updating the local branch')
+        subprocess.check_call(['git', 'pull', '-r', 'mainline', base_branch])
+    except subprocess.CalledProcessError:
+        # if the pull -r fails, abort the rebase and checkout the original
+        # branch
+        subprocess.call(['git', 'rebase', '--abort'])
+        subprocess.call(['git', 'checkout', current_branch])
+    else:
+        # if there are no errors, push the changes to origin
+        logger.debug('Pushing update to origin')
+        subprocess.call(['git', 'push', '-f', 'origin', base_branch])
+    finally:
+        # alway try to pop the stash changes after the update is done
+        if stash_ref:
+            logger.debug('Pop stashed changes')
+            subprocess.call(['git', 'stash', 'pop', '-q'])
+
+    sys.exit()
+
+
 @cli.group()
 @click.pass_obj
 def start(apis):
