@@ -33,7 +33,7 @@ class JiraAPI(object):
         """
         url = '{}{}'.format(self.base, path)
 
-        logger.debug('JiraAPI.build_path: {}'.foramt(url))
+        logger.debug('JiraAPI.build_path: {}'.format(url))
         return url
 
     def get_issue(self, id, raise_for_status=True):
