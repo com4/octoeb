@@ -39,6 +39,10 @@ _octoeb_completion() {
                     ;;
                 esac
                 ;;
+        4)
+            tickets=$(octoeb jira -m get_my_ticket_ids)
+            COMPREPLY=($(compgen -W "${tickets}" ${cur}))
+            ;;
         *)
             COMPREPLY=()
             ;;
