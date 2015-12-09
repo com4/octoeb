@@ -419,8 +419,9 @@ def review_feature(apis, ticket):
     jira = apis.get('jira')
 
     try:
-        name = '{}:feature-{}'.format(fork.owner, jira.get_issue_slug(ticket))
-        resp = api.create_pull_request('develop', name)
+        slug = jira.get_issue_slug(ticket)
+        name = '{}:feature-{}'.format(fork.owner, slug)
+        resp = api.create_pull_request('develop', name, slug)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
@@ -440,8 +441,9 @@ def review_hotfix(apis, ticket):
     jira = apis.get('jira')
 
     try:
-        name = '{}:hotfix-{}'.format(fork.owner, jira.get_issue_slug(ticket))
-        resp = api.create_pull_request('master', name)
+        slug = jira.get_issue_slug(ticket)
+        name = '{}:hotfix-{}'.format(fork.owner, slug)
+        resp = api.create_pull_request('master', name, slug)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
@@ -465,9 +467,11 @@ def review_releasefix(apis, ticket, version):
     jira = apis.get('jira')
 
     try:
+        slug = jira.get_issue_slug(ticket)
         resp = api.create_pull_request(
             'release-{}'.format(version),
-            '{}:releasefix-{}'.format(fork.owner, jira.get_issue_slug(ticket))
+            '{}:releasefix-{}'.format(fork.owner, slug),
+            slug
         )
         click.launch(resp.get('html_url'))
         sys.exit()

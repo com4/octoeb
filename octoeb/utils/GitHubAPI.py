@@ -153,7 +153,7 @@ class GitHubAPI(object):
     def create_feature_branch(self, feature_name):
         return self.create_branch(feature_name, 'develop')
 
-    def create_pull_request(self, base, head):
+    def create_pull_request(self, base, head, title):
         """Create a new pull request
 
         Arguments:
@@ -163,6 +163,7 @@ class GitHubAPI(object):
             head (str): name of the branch you want your changes pulled into.
         """
         pull_info = {
+            'title': title,
             'head': head,
             'base': base
         }
