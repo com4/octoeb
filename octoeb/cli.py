@@ -334,7 +334,8 @@ def start_hotfix(apis, ticket):
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
-    click.echo('\tgit fetch --all && git checkout {}'.format(name))
+    git.fetch('origin')
+    git.checkout(name)
     sys.exit()
 
 
@@ -367,7 +368,8 @@ def start_releasefix(apis, version, ticket):
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
-    click.echo('\tgit fetch --all && git checkout {}'.format(name))
+    git.fetch('origin')
+    git.checkout(name)
     sys.exit()
 
 
@@ -393,7 +395,6 @@ def start_feature(apis, ticket):
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
-    click.echo('\tgit fetch --all && git checkout {}'.format(name))
     git.fetch('origin')
     git.checkout(name)
     sys.exit()
