@@ -213,20 +213,59 @@ class GitHubAPI(object):
 
         return resp.json()
 
+    def check_release_status(self, release_name):
+        """Verify that the release is actually read to be released
+
+        If the release is new (corresponds to a release branch), then we check
+        that the release is merged into master.
+
+        If we can not find the release branch, we assume that it is a hotfix and
+        we verify that the major version number matches the latest release.
+
+        Args:
+            release_name (str): the version number to release
+
+        Returns:
+            None
+
+        Raises:
+            - Exception
+            - requests.exceptions.HTTPError
+        """
+        release_version = extract_major_version(release_name)
+        # Assume that this is a new release
+        # Check if the release branch is merged into master
+        try:
+            merge_status = self.compare(
+                'master',
+                'release-{}'.format(extract_major_version(release_name))
+            ).get('status')
+        except requests.exceptions.HTTPError as e:
+            logger.debug('HTTPError: {}'.format(e.message))
+            if not e.response.status_code == 404:
+                raise e
+        else:
+            # can be one of diverged, ahead, behind, identical according to
+            # http://stackoverflow.com/a/23969867
+            if merge_status in ['diverged', 'ahead']:
+                raise Exception(
+                    'Release must be merged into master before release')
+            return
+
+        # if the release branch does not exist, then we end up here,
+        # Assume that it is a hotfix
+        version = extract_major_version(self.latest_release().get('name', ''))
+        if release_version != version:
+            raise Exception(
+                'New release version does not match the current release, '
+                'we expected a hotfix.'
+            )
+
+        return
+
     def create_release(self, release_name, body=""):
 
-        # maybe we should just trying merging the branches
-        # https://developer.github.com/v3/repos/merging/
-        merge_status = self.compare(
-            'master',
-            'release-{}'.format(extract_major_version(release_name))
-        ).get('status')
-
-        # can be one of diverged, ahead, behind, identical according to
-        # http://stackoverflow.com/a/23969867
-        if merge_status in ['diverged', 'ahead']:
-            raise Exception(
-                'Release must be merged into master before release')
+        self.check_release_status(release_name)
 
         try:
             self.get_release(release_name)
