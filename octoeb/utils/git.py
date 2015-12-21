@@ -6,6 +6,10 @@ from __future__ import unicode_literals
 import subprocess
 
 
+class GitError(Exception):
+    pass
+
+
 def fetch(remote_name):
     return subprocess.call(['git', 'fetch', remote_name])
 

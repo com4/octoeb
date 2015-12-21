@@ -13,7 +13,7 @@ _octoeb_completion() {
                     COMPREPLY=($(compgen -W "feature hotfix releasefix release" ${cur}))
                     ;;
                 review)
-                    COMPREPLY=($(compgen -W "feature hotfix releasefix" ${cur}))
+                    COMPREPLY=($(compgen -W "feature hotfix releasefix flake8" ${cur}))
                     ;;
                 qa)
                     COMPREPLY=($(compgen -W "-v" ${cur}))
@@ -33,6 +33,9 @@ _octoeb_completion() {
             case ${prev} in
                 feature|hotfix|releasefix)
                     COMPREPLY=($(compgen -W "-t" ${cur}))
+                    ;;
+                flake8)
+                    COMPREPLY=($(compgen -W "-b" ${cur}))
                     ;;
                 *)
                     COMPREPLY=()
