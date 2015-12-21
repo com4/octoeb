@@ -66,6 +66,7 @@ import click
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
 from octoeb.utils import git
+from octoeb.utils import python
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
 
@@ -407,6 +408,25 @@ def review(apis):
     pass
 
 
+@review.command('flake8')
+@click.option(
+    '-b', '--branch',
+    default='develop',
+    help='Base branch to diff with')
+@click.pass_obj
+def review_flake8(apis, branch):
+    """Run flake8 on the diff between the current branch the provided base"""
+    try:
+        issues = python.check_flake8_issues(branch)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        # note that issues can be the empty string or the list of flake8 issues
+        # if it is the empty string, sys.exit will exit with status code 0,
+        # since we will pass it the None object.
+        sys.exit(issues or None)
+
+
 @review.command('feature')
 @click.option(
     '-t', '--ticket',
@@ -421,7 +441,21 @@ def review_feature(apis, ticket):
 
     try:
         slug = jira.get_issue_slug(ticket)
-        name = '{}:feature-{}'.format(fork.owner, slug)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        fix_branch = 'feature-{}'.format(slug)
+
+    try:
+        issues = python.check_flake8_issues('develop', fix_branch)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        if issues:
+            sys.exit(issues)
+
+    try:
+        name = '{}:{}'.format(fork.owner, fix_branch)
         resp = api.create_pull_request('develop', name, slug)
         click.launch(resp.get('html_url'))
         sys.exit()
@@ -443,7 +477,21 @@ def review_hotfix(apis, ticket):
 
     try:
         slug = jira.get_issue_slug(ticket)
-        name = '{}:hotfix-{}'.format(fork.owner, slug)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        fix_branch = 'hotfix-{}'.format(slug)
+
+    try:
+        issues = python.check_flake8_issues('master', fix_branch)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        if issues:
+            sys.exit(issues)
+
+    try:
+        name = '{}:{}'.format(fork.owner, fix_branch)
         resp = api.create_pull_request('master', name, slug)
         click.launch(resp.get('html_url'))
         sys.exit()
@@ -463,15 +511,30 @@ def review_hotfix(apis, ticket):
 @click.pass_obj
 def review_releasefix(apis, ticket, version):
     """Create PR for a release bugfix branch"""
+    release_branch = 'release-{}'.format(version)
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
 
     try:
         slug = jira.get_issue_slug(ticket)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        fix_branch = 'releasefix-{}'.format(slug)
+
+    try:
+        issues = python.check_flake8_issues(release_branch, fix_branch)
+    except Exception as e:
+        sys.exit(e.message)
+    else:
+        if issues:
+            sys.exit(issues)
+
+    try:
         resp = api.create_pull_request(
-            'release-{}'.format(version),
-            '{}:releasefix-{}'.format(fork.owner, slug),
+            release_branch,
+            '{}:{}'.format(fork.owner, fix_branch),
             slug
         )
         click.launch(resp.get('html_url'))
