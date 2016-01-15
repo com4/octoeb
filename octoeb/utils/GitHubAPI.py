@@ -255,6 +255,9 @@ class GitHubAPI(object):
         # if the release branch does not exist, then we end up here,
         # Assume that it is a hotfix
         version = extract_major_version(self.latest_release().get('name', ''))
+        if version.startswith('release-'):
+            version = version[8:]
+        logger.debug(version)
         if release_version != version:
             raise Exception(
                 'New release version does not match the current release, '

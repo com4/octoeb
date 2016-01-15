@@ -356,7 +356,7 @@ def start_releasefix(apis, version, ticket):
     jira = apis.get('jira')
     try:
         name = 'releasefix-{}'.format(jira.get_issue_slug(ticket))
-        branch = api.create_hotfix_branch(
+        branch = api.create_releasefix_branch(
             name,
             'release-{}'.format(extract_major_version(version))
         )
