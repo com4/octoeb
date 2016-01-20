@@ -316,17 +316,24 @@ def start_release(apis, version):
             '/slack_prod/slack/slash-commands/release-channel'
         )
         logger.info('Channel name: {}'.format(channel_name))
-        resp = requests.post(
-            slack_create_url,
-            data={
-                'channel_id': channel_name,
-                'text': channel_name
-            })
 
-        logger.debug(resp)
-
-        logger.info('Tagging new version for qa')
-        qa(apis, version)
+        try:
+            resp = requests.post(
+                slack_create_url,
+                data={
+                    'channel_id': channel_name,
+                    'text': channel_name
+                })
+            logger.debug(resp)
+        except Exception as e:
+            sys.exit(e.message)
+        finally:
+            logger.info('Tagging new version for qa')
+            qa(apis, version)
+    finally:
+        click.echo('Branch: {} created'.format(name))
+        click.echo(branch.get('url'))
+        click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
@@ -337,7 +344,6 @@ def start_release(apis, version):
 
     click.echo('Changelog:')
     click.echo(git.changelog('master', 'name'))
-
     sys.exit()
 
 
