@@ -122,9 +122,9 @@ def cli(ctx):
     # Setup the API
     config = ConfigParser.ConfigParser()
     config.read([
-        '.octoebrc',
         os.path.expanduser('~/.config/octoeb'),
-        os.path.expanduser('~/.octoebrc')
+        os.path.expanduser('~/.octoebrc'),
+        '.octoebrc'
     ])
 
     try:
