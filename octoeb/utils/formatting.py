@@ -18,7 +18,7 @@ def validate_config(config):
     assert config.has_option('repo', 'FORK'), 'Missing FORK name in config'
     assert config.has_option('repo', 'OWNER'), \
         'Missing mainline OWNER name in config'
-    assert config.has_section('bugtracker')
+    assert config.has_section('bugtracker'), 'Missing bugtracker section'
 
 
 def validate_ticket_name(name):
