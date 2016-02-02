@@ -352,7 +352,7 @@ def start_hotfix(apis, ticket):
 @click.pass_obj
 def start_releasefix(apis, version, ticket):
     """Start new hotfix for a pre-release"""
-    api = apis.get('fork')
+    api = apis.get('mainline')
     jira = apis.get('jira')
     try:
         name = 'releasefix-{}'.format(jira.get_issue_slug(ticket))
@@ -361,7 +361,7 @@ def start_releasefix(apis, version, ticket):
             'release-{}'.format(extract_major_version(version))
         )
     except GitHubAPI.DuplicateBranchError as e:
-        git.fetch('origin')
+        git.fetch('mainline')
         git.checkout(name)
         sys.exit('Branch already started')
     except Exception as e:
@@ -369,7 +369,7 @@ def start_releasefix(apis, version, ticket):
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
-    git.fetch('origin')
+    git.fetch('mainline')
     git.checkout(name)
     sys.exit()
 
