@@ -343,8 +343,25 @@ def start_release(apis, version):
     git.checkout(name)
 
     click.echo('Changelog:')
-    click.echo(git.changelog('master', 'name'))
+    click.echo(git.changelog('master', name))
     sys.exit()
+
+
+@cli.command()
+@click.option(
+    '-h', '--head',
+    help='ID of ticket reporting the bug to be fixed, slug will be generated')
+@click.option(
+    '-b', '--base',
+    help='ID of ticket reporting the bug to be fixed, slug will be generated')
+@click.pass_obj
+def changelog(apis, base, head):
+    """Get changelog between base branch and head branch"""
+    git.fetch('mainline')
+    git.checkout(head)
+
+    click.echo('Changelog:')
+    click.echo(git.changelog(base, head))
 
 
 @start.command('hotfix')
@@ -516,13 +533,13 @@ def review_hotfix(apis, ticket):
     else:
         fix_branch = 'hotfix-{}'.format(slug)
 
-    try:
-        issues = python.check_flake8_issues('master', fix_branch)
-    except Exception as e:
-        sys.exit(e.message)
-    else:
-        if issues:
-            sys.exit(issues)
+    # try:
+    #     issues = python.check_flake8_issues('master', fix_branch)
+    # except Exception as e:
+    #     sys.exit(e.message)
+    # else:
+    #     if issues:
+    #         sys.exit(issues)
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
@@ -577,14 +594,19 @@ def review_releasefix(apis, ticket, version):
         sys.exit(e.message)
 
 
-@cli.command()
+@cli.command('qa')
 @click.option(
     '-v', '--version',
     callback=validate_version_arg,
     help='Full version number of the release to QA (pre-release)')
 @click.pass_obj
+def start_prerelease(apis, version):
+    """Publish pre-release on GitHub for QA."""
+    qa(apis, version)
+
+
 def qa(apis, version):
-    """Publish pre-release on GitHub for QA"""
+    """Publish pre-release on GitHub for QA."""
     api = apis.get('mainline')
     try:
         api.create_pre_release(version)
