@@ -48,7 +48,7 @@ def changelog(base_branch, new_branch):
         log = subprocess.check_output(
             (
                 'git', 'log', '--oneline', '--merges',
-                '{base}..{new}'.format(base_branch, new_branch)
+                '{base}..{new}'.format(base=base_branch, new=new_branch)
             )
         )
         changelog = changelog_re.findall(log)
