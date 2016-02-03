@@ -310,6 +310,13 @@ def start_release(apis, version):
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
     click.echo('\tgit fetch --all && git checkout {}'.format(name))
+
+    git.fetch('mainline')
+    git.checkout(name)
+
+    click.echo('Changelog:')
+    click.echo(git.changelog('master', 'name'))
+
     sys.exit()
 
 
