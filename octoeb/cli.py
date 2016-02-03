@@ -62,6 +62,7 @@ import subprocess
 import sys
 
 import click
+import requests
 
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
@@ -298,7 +299,8 @@ def start_release(apis, version):
     """Start new version branch"""
     api = apis.get('mainline')
     try:
-        name = 'release-{}'.format(extract_major_version(version))
+        major_version = extract_major_version(version)
+        name = 'release-{}'.format(major_version)
         branch = api.create_release_branch(name)
     except GitHubAPI.DuplicateBranchError as e:
         git.fetch('mainline')
@@ -306,6 +308,32 @@ def start_release(apis, version):
         sys.exit('Branch already started')
     except Exception as e:
         sys.exit(e.message)
+    else:
+        logger.info('Creating slack channel')
+        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
+        slack_create_url = (
+            'https://zyhpsjavp8.execute-api.us-west-2.amazonaws.com'
+            '/slack_prod/slack/slash-commands/release-channel'
+        )
+        logger.info('Channel name: {}'.format(channel_name))
+
+        try:
+            resp = requests.post(
+                slack_create_url,
+                data={
+                    'channel_id': channel_name,
+                    'text': channel_name
+                })
+            logger.debug(resp)
+        except Exception as e:
+            sys.exit(e.message)
+        finally:
+            logger.info('Tagging new version for qa')
+            qa(apis, version)
+    finally:
+        click.echo('Branch: {} created'.format(name))
+        click.echo(branch.get('url'))
+        click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
@@ -316,7 +344,6 @@ def start_release(apis, version):
 
     click.echo('Changelog:')
     click.echo(git.changelog('master', 'name'))
-
     sys.exit()
 
 
