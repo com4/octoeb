@@ -68,6 +68,7 @@ from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
 from octoeb.utils import git
 from octoeb.utils import python
+from octoeb.utils import migrations
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
 
@@ -309,6 +310,14 @@ def start_release(apis, version):
     except Exception as e:
         sys.exit(e.message)
     else:
+        git.fetch('mainline')
+        log = git.log(
+            'mainline/master', 'mainline/{}'.format(name), merges=True)
+        changelog = git.changelog(log)
+
+        click.echo('Changelog:')
+        click.echo(changelog)
+
         logger.info('Creating slack channel')
         channel_name = 'release_{}'.format(major_version.replace('.', '_'))
         slack_create_url = (
@@ -335,31 +344,62 @@ def start_release(apis, version):
         click.echo(branch.get('url'))
         click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
-    click.echo('Branch: {} created'.format(name))
-    click.echo(branch.get('url'))
-    click.echo('\tgit fetch --all && git checkout {}'.format(name))
-
-    git.fetch('mainline')
-    git.checkout(name)
-
-    click.echo('Changelog:')
-    click.echo(git.changelog('master', name))
     sys.exit()
 
 
 def get_deploy_relavent_changes(base, head):
-
     log = git.log(base, head)
     staticfile_changes = git.find_staticfile_changes(log)
     migration_changes = git.find_migrations_changes(log)
     bower_changes = git.find_bower_changes(log)
     pip_changes = git.find_requirements_changes(log)
 
-    return (
-        u'\n'.join(staticfile_changes) or 'No staticfile changes',
-        u'\n'.join(bower_changes) or 'No bower changes',
-        u'\n'.join(pip_changes) or 'No pip changes',
-        u'\n'.join(migration_changes) or 'No Migrations',
+    if staticfile_changes:
+        staticfile_msg = 'Staticfile changes:\n{}'.format(
+            u'\n'.join(staticfile_changes))
+    else:
+        staticfile_msg = 'No staticfile changes'
+
+    if bower_changes:
+        bower_msg = 'Bower chagnes:\n{}'.format(
+            u'\n'.join(bower_changes))
+    else:
+        bower_msg = 'No bower changes'
+
+    if pip_changes:
+        pip_msg = 'Bower chagnes:\n{}'.format(
+            u'\n'.join(pip_changes))
+    else:
+        pip_msg = 'No bower changes'
+
+    return (staticfile_msg, bower_msg, pip_msg), migration_changes
+
+
+def audit_changes(base, head, txt=False):
+    changes_txt_list, migrations_list = get_deploy_relavent_changes(base, head)
+    problem_migrations, sql_map = migrations.check_problem_sql(migrations_list)
+
+    sql_msgs = []
+    # Print out the SQL for the "non problem" migrations
+    for migration, sql in sql_map.iteritems():
+        if migration in problem_migrations:
+            alert = (
+                u'\\033[0;31m{m} could break backwards compatibility\033[0m'
+                u'\n{errors}'
+                u'\n{sql}'
+
+            ).format(
+                m=migration,
+                errors=u'\n'.join(problem_migrations[migration]),
+                sql=sql)
+        else:
+            alert = u'{}:\n{}'.format(migration, sql or '\tNOOP')
+
+        sql_msgs.append(alert)
+
+    return "{file_changes}\n\nMigrations:\n{sql_changes}".format(
+        file_changes='\n'.join(changes_txt_list),
+        sql_changes='\n'.join(sql_msgs),
     )
 
 
@@ -379,8 +419,8 @@ def changelog(apis, base, head):
     logger.debug(log)
     ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
-    click.echo('Changelog:')
-    click.echo(changelog)
+    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(changes=changelog))
+    click.echo('\n{audit}'.format(audit=audit_changes(base, head)))
 
 
 @start.command('hotfix')
