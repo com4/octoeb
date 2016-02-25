@@ -347,21 +347,40 @@ def start_release(apis, version):
     sys.exit()
 
 
+def get_deploy_relavent_changes(base, head):
+
+    log = git.log(base, head)
+    staticfile_changes = git.find_staticfile_changes(log)
+    migration_changes = git.find_migrations_changes(log)
+    bower_changes = git.find_bower_changes(log)
+    pip_changes = git.find_requirements_changes(log)
+
+    return (
+        u'\n'.join(staticfile_changes) or 'No staticfile changes',
+        u'\n'.join(bower_changes) or 'No bower changes',
+        u'\n'.join(pip_changes) or 'No pip changes',
+        u'\n'.join(migration_changes) or 'No Migrations',
+    )
+
+
 @cli.command()
 @click.option(
     '-h', '--head',
-    help='ID of ticket reporting the bug to be fixed, slug will be generated')
+    default='',
+    help='Name of branch that contains the changes.')
 @click.option(
     '-b', '--base',
-    help='ID of ticket reporting the bug to be fixed, slug will be generated')
+    default='master',
+    help='Name of the branch to compare the history starting from.')
 @click.pass_obj
 def changelog(apis, base, head):
     """Get changelog between base branch and head branch"""
-    git.fetch('mainline')
-    git.checkout(head)
+    log = git.log(base, head, merges=True)
+    logger.debug(log)
+    ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
     click.echo('Changelog:')
-    click.echo(git.changelog(base, head))
+    click.echo(changelog)
 
 
 @start.command('hotfix')
@@ -496,14 +515,6 @@ def review_feature(apis, ticket):
         sys.exit(e.message)
     else:
         fix_branch = 'feature-{}'.format(slug)
-
-    try:
-        issues = python.check_flake8_issues('develop', fix_branch)
-    except Exception as e:
-        sys.exit(e.message)
-    else:
-        if issues:
-            sys.exit(issues)
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
