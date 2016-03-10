@@ -193,10 +193,18 @@ class JiraAPI(object):
         logger.debug('JiraAPI.get_status_categories')
         return self.get('statuscategory')
 
-    def get_issue_slug(self, id):
+    def get_issue_slug(self, id, summary=None):
         logger.debug('JiraAPI.get_issue_slug')
+        if summary is None:
+            issue = self.get_issue(id)
+            summary = issue.get('fields').get('summary')
+
+        return '{}-{}'.format(id, slugify(summary))
+
+    def get_issue_summary(self, id):
+        logger.debug('JiraAPI.get_issue_summary')
         issue = self.get_issue(id)
-        return '{}-{}'.format(id, slugify(issue.get('fields').get('summary')))
+        return issue.get('fields').get('summary')
 
     def get_release_notes(self, version_id, project_id):
         logger.debug('JiraAPI.get_release_notes')

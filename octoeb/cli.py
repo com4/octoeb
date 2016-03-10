@@ -550,7 +550,8 @@ def review_feature(apis, ticket):
     jira = apis.get('jira')
 
     try:
-        slug = jira.get_issue_slug(ticket)
+        summary = jira.get_issue_summary(ticket)
+        slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
         sys.exit(e.message)
     else:
@@ -558,7 +559,9 @@ def review_feature(apis, ticket):
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        resp = api.create_pull_request('develop', name, slug)
+        title = 'Feature {ticket}: {summary}'.format(
+            ticket=ticket, summary=summary)
+        resp = api.create_pull_request('develop', name, title)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
@@ -578,23 +581,19 @@ def review_hotfix(apis, ticket):
     jira = apis.get('jira')
 
     try:
-        slug = jira.get_issue_slug(ticket)
+        summary = jira.get_issue_summary(ticket)
+        slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
         sys.exit(e.message)
     else:
         fix_branch = 'hotfix-{}'.format(slug)
 
-    # try:
-    #     issues = python.check_flake8_issues('master', fix_branch)
-    # except Exception as e:
-    #     sys.exit(e.message)
-    # else:
-    #     if issues:
-    #         sys.exit(issues)
-
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        resp = api.create_pull_request('master', name, slug)
+        title = 'Feature {ticket}: {summary}'.format(
+            ticket=ticket, summary=summary)
+        body = git.log_messages('master', fix_branch)
+        resp = api.create_pull_request('master', name, title, body)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
@@ -619,7 +618,8 @@ def review_releasefix(apis, ticket, version):
     jira = apis.get('jira')
 
     try:
-        slug = jira.get_issue_slug(ticket)
+        summary = jira.get_issue_summary(ticket)
+        slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
         sys.exit(e.message)
     else:
@@ -634,11 +634,10 @@ def review_releasefix(apis, ticket, version):
             sys.exit(issues)
 
     try:
-        resp = api.create_pull_request(
-            release_branch,
-            '{}:{}'.format(fork.owner, fix_branch),
-            slug
-        )
+        name = '{}:{}'.format(fork.owner, fix_branch)
+        title = 'Feature {ticket}: {summary}'.format(
+            ticket=ticket, summary=summary)
+        resp = api.create_pull_request(release_branch, name, title)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:

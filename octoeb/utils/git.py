@@ -40,6 +40,17 @@ migrations_re = re.compile(r'A.*migrations.*', re.I)
 integrations_re = re.compile(r'M.*integrations', re.I)
 
 
+def log_messages(base='develop', head='', number=None):
+    """Return the log messages of the current branch, since base."""
+    cmd = ['git', 'log', '--format=%B', ]
+    cmd.append('{base}...'.format(base=base))
+    try:
+        logger.debug(u'Running: {}'.format(cmd))
+        return subprocess.check_output(cmd)
+    except subprocess.CalledProcessError:
+        raise ValueError('Can not generate log messages.')
+
+
 def log(base='master', head='', directory=None, merges=False):
     """Retrun simple git log.
 

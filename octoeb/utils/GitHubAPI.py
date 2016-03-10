@@ -153,7 +153,7 @@ class GitHubAPI(object):
     def create_feature_branch(self, feature_name):
         return self.create_branch(feature_name, 'develop')
 
-    def create_pull_request(self, base, head, title):
+    def create_pull_request(self, base, head, title, body=None):
         """Create a new pull request
 
         Arguments:
@@ -167,6 +167,9 @@ class GitHubAPI(object):
             'head': head,
             'base': base
         }
+        if body:
+            pull_info['body'] = body
+
         logger.info(pull_info)
 
         resp = self.post('pulls', json=pull_info)
