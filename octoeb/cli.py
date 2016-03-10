@@ -590,7 +590,7 @@ def review_hotfix(apis, ticket):
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        title = 'Feature {ticket}: {summary}'.format(
+        title = 'Hotfix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
         body = git.log_messages('master', fix_branch)
         resp = api.create_pull_request('master', name, title, body)
@@ -635,7 +635,7 @@ def review_releasefix(apis, ticket, version):
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        title = 'Feature {ticket}: {summary}'.format(
+        title = 'ReleaseFix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
         resp = api.create_pull_request(release_branch, name, title)
         click.launch(resp.get('html_url'))
