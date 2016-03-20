@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+from contextlib import contextmanager
 import logging
 import re
 import subprocess
@@ -130,3 +131,45 @@ def changelog(log, ticket_ids=False):
         return jira_issues, changelog
 
     return changelog
+
+
+@contextmanager
+def on_branch(name, remote_name='mainline'):
+    """Quickly out a branch and then revert to the orignal state.
+
+    The `on_branch` context manager allows you to store the user's current
+    branch info, including any staged or unstaged changes.  It will then
+    checkout the named branch, update it from the remote, and then do
+    the work inside the context manager.  When finished it will go back to
+    the original branch and pop any stashed work.
+    """
+    # store the current branch info
+    org_branch = subprocess.check_output([
+        'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+    ])
+    org_branch = org_branch.strip()
+    logger.debug('current branch name: {}'.format(org_branch))
+
+    logger.debug('stashing current branch')
+    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = stash_ref.strip()
+
+    if stash_ref:
+        logger.debug('stash_ref: {}'.format(stash_ref))
+        subprocess.call(['git', 'stash', 'store', '-q', stash_ref])
+        subprocess.call(['git', 'reset', '--hard'])
+
+    # go to the new branch
+    subprocess.call(['git', 'checkout', '-q', name])
+    # update the branch from the remote
+    subprocess.call(['git', 'pull', '-q', remote_name, name])
+
+    # do work inside the context manager here
+    yield
+
+    # go back to the original branch state
+    logger.debug('checkout the original branch: {}'.format(org_branch))
+    subprocess.call(['git', 'checkout', '-q', org_branch])
+
+    if stash_ref:
+        subprocess.call(['git', 'stash', 'pop', '-q'])
