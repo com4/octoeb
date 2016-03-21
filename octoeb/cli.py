@@ -590,7 +590,7 @@ def review_hotfix(apis, ticket):
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        title = 'Feature {ticket}: {summary}'.format(
+        title = 'Hotfix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
         body = git.log_messages('master', fix_branch)
         resp = api.create_pull_request('master', name, title, body)
@@ -625,17 +625,17 @@ def review_releasefix(apis, ticket, version):
     else:
         fix_branch = 'releasefix-{}'.format(slug)
 
-    try:
-        issues = python.check_flake8_issues(release_branch, fix_branch)
-    except Exception as e:
-        sys.exit(e.message)
-    else:
-        if issues:
-            sys.exit(issues)
+    # try:
+    #     issues = python.check_flake8_issues(release_branch, fix_branch)
+    # except Exception as e:
+    #     sys.exit(e.message)
+    # else:
+    #     if issues:
+    #         sys.exit(issues)
 
     try:
         name = '{}:{}'.format(fork.owner, fix_branch)
-        title = 'Feature {ticket}: {summary}'.format(
+        title = 'ReleaseFix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
         resp = api.create_pull_request(release_branch, name, title)
         click.launch(resp.get('html_url'))
@@ -658,8 +658,18 @@ def start_prerelease(apis, version):
 def qa(apis, version):
     """Publish pre-release on GitHub for QA."""
     api = apis.get('mainline')
+    name = 'release-{}'.format(extract_major_version(version))
+
+    log = ''
+    with git.on_branch(name):
+        log = git.log('master', name, merges=True)
+        ticket_ids, changelog = git.changelog(log, ticket_ids=True)
+
+        logger.debug('Changelog found:\n{}'.format(changelog))
+        changelog = '**Changes:**\n{}'.format(changelog)
+
     try:
-        api.create_pre_release(version)
+        api.create_pre_release(version, body=changelog)
         sys.exit()
     except Exception as e:
         sys.exit(e.message)
@@ -674,8 +684,19 @@ def qa(apis, version):
 def release(apis, version):
     """Publish release on GitHub"""
     api = apis.get('mainline')
+
+    current_release = api.latest_release()
+
+    log = ''
+    with git.on_branch('master'):
+        log = git.log(current_release.get('tag_name'), 'master', merges=True)
+        ticket_ids, changelog = git.changelog(log, ticket_ids=True)
+
+        logger.debug('Changelog found:\n{}'.format(changelog))
+        changelog = '**Changes:**\n{}'.format(changelog)
+
     try:
-        api.create_release(version)
+        api.create_release(version, body=changelog)
         sys.exit()
     except Exception as e:
         sys.exit(e.message)
