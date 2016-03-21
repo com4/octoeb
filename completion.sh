@@ -5,7 +5,7 @@ _octoeb_completion() {
 
     case ${COMP_CWORD} in
         1)
-            COMPREPLY=($(compgen -W "start review qa release jira method sync update changelog" ${cur}))
+            COMPREPLY=($(compgen -W "start review qa release jira method sync update changelog versions" ${cur}))
             ;;
         2)
             case ${prev} in

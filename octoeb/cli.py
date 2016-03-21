@@ -702,6 +702,21 @@ def release(apis, version):
         sys.exit(e.message)
 
 
+@cli.command()
+@click.pass_obj
+def versions(apis):
+    """Get the current release and pre-release versions on GitHub"""
+    api = apis.get('mainline')
+
+    current_release = api.latest_release()
+    current_prerelease = api.latest_prerelease()
+
+    version = current_release.get('tag_name')
+
+    click.echo('Release: {}'.format(version))
+    click.echo('Pre-Release: {}'.format(current_prerelease.get('tag_name')))
+
+
 @cli.command('method')
 @click.option(
     '-t', '--target',
