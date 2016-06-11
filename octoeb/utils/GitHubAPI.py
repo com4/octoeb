@@ -103,7 +103,23 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def create_branch(self, name, base_name):
+    def create_branch(self, name, base_name, from_sha=False):
+        """Create a new branch.
+
+        Args:
+            name (str): name of the new branch
+            base_name (str): name of the base branch or the base sha
+            from_sha (bool): determine if the `base_name` is a sha or a name.
+                Defaults to False.
+
+        Returns:
+            dict: json response from GitHub.
+
+        Raises:
+            DuplicateBranchError
+            Exception
+        """
+
         logger.debug(
             'GitHubAPI.create_branch: name={}, base_name={}'.format(
                 name, base_name
@@ -121,11 +137,16 @@ class GitHubAPI(object):
                 '\n\tgit fetch --all && get checkout {}'.format(name)
             )
 
-        base = self.get_branch(base_name)
+        if not from_sha:
+            base = self.get_branch(base_name)
+            base_sha = base['object']['sha']
+        else:
+            base_sha = base_name
+
         try:
             branch_info = {
                 'ref': 'refs/heads/{}'.format(name),
-                'sha': base['object']['sha']
+                'sha': base_sha
             }
         except KeyError:
             logger.error('base repsonse: {}'.format(base))
@@ -133,6 +154,21 @@ class GitHubAPI(object):
                 'Could not locate the current SHA for '.format(base_name))
 
         resp = self.post('git/refs', json=branch_info)
+        try:
+            resp.raise_for_status()
+        except Exception:
+            logger.error(resp.json())
+            raise
+
+        return resp.json()
+
+    def update_branch(self, name, sha):
+        """Update attempt to update branch to the given SHA."""
+        branch_info = {
+            'sha': sha,
+        }
+        resp = self.patch('git/refs/heads/{}'.format(name), json=branch_info)
+
         try:
             resp.raise_for_status()
         except Exception:

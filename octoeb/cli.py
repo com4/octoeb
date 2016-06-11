@@ -463,15 +463,30 @@ def start_hotfix(apis, ticket):
 def start_releasefix(apis, version, ticket):
     """Start new hotfix for a pre-release"""
     api = apis.get('mainline')
+    fork = apis.get('fork')
     jira = apis.get('jira')
+
+    release_name = 'release-{}'.format(extract_major_version(version))
+    try:
+        base_release_branch = api.get_branch(release_name)
+        release_sha = base_release_branch['object']['sha']
+    except Exception as e:
+        sys.exit(e.message)
+
+    # create or sync the release branch on the fork
+    try:
+        fork.create_branch(release_name, release_sha, from_sha=True)
+    except GitHubAPI.DuplicateBranchError as e:
+        fork.update_branch(release_name, release_sha)
+    except Exception as e:
+        sys.exit(e.message)
+
+    # creak the releasefix branch
     try:
         name = 'releasefix-{}'.format(jira.get_issue_slug(ticket))
-        branch = api.create_releasefix_branch(
-            name,
-            'release-{}'.format(extract_major_version(version))
-        )
+        branch = fork.create_releasefix_branch(name, release_name)
     except GitHubAPI.DuplicateBranchError as e:
-        git.fetch('mainline')
+        git.fetch('origin')
         git.checkout(name)
         sys.exit('Branch already started')
     except Exception as e:
@@ -479,7 +494,7 @@ def start_releasefix(apis, version, ticket):
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
-    git.fetch('mainline')
+    git.fetch('origin')
     git.checkout(name)
     sys.exit()
 
@@ -625,16 +640,8 @@ def review_releasefix(apis, ticket, version):
     else:
         fix_branch = 'releasefix-{}'.format(slug)
 
-    # try:
-    #     issues = python.check_flake8_issues(release_branch, fix_branch)
-    # except Exception as e:
-    #     sys.exit(e.message)
-    # else:
-    #     if issues:
-    #         sys.exit(issues)
-
     try:
-        name = '{}:{}'.format(fork.owner, fix_branch)
+        name = '{}:{}'.format(api.owner, fix_branch)
         title = 'ReleaseFix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
         resp = api.create_pull_request(release_branch, name, title)
