@@ -641,10 +641,11 @@ def review_releasefix(apis, ticket, version):
         fix_branch = 'releasefix-{}'.format(slug)
 
     try:
-        name = '{}:{}'.format(api.owner, fix_branch)
+        name = '{}:{}'.format(fork.owner, fix_branch)
         title = 'ReleaseFix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
-        resp = api.create_pull_request(release_branch, name, title)
+        body = git.log_messages('master', fix_branch)
+        resp = api.create_pull_request(release_branch, name, title, body)
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
