@@ -46,6 +46,7 @@ expect this file to contain the following ini-style configuration:
     TICKET_FILTER_ID=123
 
 In `repo`
+
 1. OWNER and REPO are https://github.com/OWNER/REPO when you visit a repo on
    GitHub, so for example https://github.com/enderlabs/eventboard.io gives
    OWNER=enderlabs and REPO=eventboard.io
@@ -53,6 +54,7 @@ In `repo`
 3. USER is your login email for GitHub
 
 In `bugtracker`
+
 1. USER is your login email for JIRA`
 2. TOKEN is your JIRA password
 3. TICKET_FILTER_ID is the search filter used for tab completion of ticket ids
