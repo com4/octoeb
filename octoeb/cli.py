@@ -742,7 +742,7 @@ def versions(apis):
 )
 @click.pass_obj
 def call_method(apis, target, method_name, method_args):
-    """Call GitHubAPI directly"""
+    """(DEV) Call GitHubAPI directly"""
     api = apis.get(target)
     try:
         click.echo(getattr(api, method_name)(*method_args))
@@ -754,16 +754,16 @@ def call_method(apis, target, method_name, method_args):
 @cli.command('jira')
 @click.option(
     '-m', '--name', 'method_name',
-    help='GitHubAPI method to call'
+    help='JIRA method to call'
 )
 @click.option(
     '-a', '--args', 'method_args',
     multiple=True,
-    help='GitHubAPI method arguments'
+    help='JIRA method arguments'
 )
 @click.pass_obj
 def call_jira_method(apis, method_name, method_args):
-    """Call JiraAPI mehtod directly"""
+    """(DEV) Call JiraAPI mehtod directly"""
     jira = apis.get('jira')
     try:
         click.echo(getattr(jira, method_name)(*method_args))
