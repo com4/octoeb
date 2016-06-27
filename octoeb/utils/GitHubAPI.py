@@ -46,6 +46,13 @@ class GitHubAPI(object):
             auth=(self.user, self.token), *args, **kwargs
         )
 
+    def patch(self, path, *args, **kwargs):
+        logger.debug('GitHubAPI.patch: {} {} {}'.format(path, args, kwargs))
+        return requests.patch(
+            self.build_path(path),
+            auth=(self.user, self.token), *args, **kwargs
+        )
+
     def releases(self):
         return self.get('releases')
 
