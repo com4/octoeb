@@ -92,11 +92,11 @@ def find_migrations_changes(log):
 
 
 def find_bower_changes(log):
-    return re.findall(r'^[AMD].*bower.*', log)
+    return re.findall(r'^[AMD].*bower.*', log, flags=re.M)
 
 
 def find_requirements_changes(log):
-    return re.findall(r'^M.*requirements.*', log)
+    return re.findall(r'^M.*requirements.*', log, flags=re.M)
 
 
 def changelog(log, ticket_ids=False):

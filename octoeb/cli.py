@@ -367,10 +367,10 @@ def get_deploy_relavent_changes(base, head):
         bower_msg = 'No bower changes'
 
     if pip_changes:
-        pip_msg = 'Bower chagnes:\n{}'.format(
+        pip_msg = 'Pip changes:\n{}'.format(
             u'\n'.join(pip_changes))
     else:
-        pip_msg = 'No bower changes'
+        pip_msg = 'No pip changes'
 
     return (staticfile_msg, bower_msg, pip_msg), migration_changes
 
