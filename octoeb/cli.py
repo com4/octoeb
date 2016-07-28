@@ -306,10 +306,12 @@ def start_release(apis, version):
     except GitHubAPI.DuplicateBranchError as e:
         git.fetch('mainline')
         git.checkout(name)
-        sys.exit('Branch already started')
+        branch = api.get_branch(name)
+        logger.debug('Branch already started')
     except Exception as e:
         sys.exit(e.message)
-    else:
+
+    try:
         git.fetch('mainline')
         log = git.log(
             'mainline/master', 'mainline/{}'.format(name), merges=True)
@@ -339,6 +341,8 @@ def start_release(apis, version):
         finally:
             logger.info('Tagging new version for qa')
             qa(apis, version)
+    except Exception as e:
+        sys.exit(e.message)
     finally:
         click.echo('Branch: {} created'.format(name))
         click.echo(branch.get('url'))
@@ -396,6 +400,9 @@ def audit_changes(base, head, txt=False):
             alert = u'{}:\n{}'.format(migration, sql or '\tNOOP')
 
         sql_msgs.append(alert)
+
+    if not sql_msgs:
+        sql_msgs.append('No migrations found.')
 
     return "{file_changes}\n\nMigrations:\n{sql_changes}".format(
         file_changes='\n'.join(changes_txt_list),
