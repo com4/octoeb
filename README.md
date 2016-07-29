@@ -11,22 +11,14 @@ each time.
 The only external library that this tool depends on is Requests and Click.  
 Clone the repo run
 
-    pip install .
+    pip install --editable .
 
 To verify the install, start a new shell and run
 
     octoeb --help
 
 
-## Developing
-Install the package using
-
-    pip install --editable .
-
-Start coding!
-
-
-## Configuration
+### Configuration
 The script looks for the file `.octoebrc` in either the current directory or
 your home directory.  You can also place the config in `~/.config/octoeb`.  We
 expect this file to contain the following ini-style configuration:
@@ -59,7 +51,18 @@ In `bugtracker`
 2. TOKEN is your JIRA password
 3. TICKET_FILTER_ID is the search filter used for tab completion of ticket ids
 
-## Tab Completion
+### Usage
+There are three major command `start`, `qa`, and `release`. Enter
+
+    $ octoeb start --help
+    $ octoeb start hotfix --help
+    $ octoeb start release --help
+    $ octoeb qa --help
+    $ octoeb release --help
+
+respectively for usage details.
+
+### Tab Completion
 To add tab completion in `bash` simply add
 
     source /path/to/octoeb/completion.sh
@@ -72,16 +75,12 @@ If you are running `zsh`, then you must also add
 
 to the beginning of your `zshrc`.
 
-## Usage
-There are three major command `start`, `qa`, and `release`. Enter
 
-    $ octoeb start --help
-    $ octoeb start hotfix --help
-    $ octoeb start release --help
-    $ octoeb qa --help
-    $ octoeb release --help
+## Developing
+Clone, install as above,
 
-respectively for usage details.
+    pip install --editable .
 
+Start coding!  Your changes will take immediate effect. 
 
 Author: Lucas Roesler <lucas@eventboard.io>
