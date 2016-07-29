@@ -99,10 +99,47 @@ def validate_version_arg(ctx, param, version):
     raise click.BadParameter('Invalid versom format: {}'.format(version))
 
 
+def validate_version_arg_or_latest_prerelease(ctx, param, version):
+    if version is None:
+        logger.debug('Version not provided, pulling latest from github')
+        version = ctx.obj.get('mainline').latest_prerelease().get('tag_name')
+        if version is None:
+            raise click.BadParameter('Version number is required')
+
+        logger.debug('Found pre-release version: {}'.format(version))
+
+    if re.match(r'^(?:\.?\d+){4,5}$', version):
+        return version
+
+    raise click.BadParameter('Invalid versom format: {}'.format(version))
+
+
 def validate_ticket_arg(ctx, param, name):
     """Verify issue id format and return issue slug"""
     if name is None:
         raise click.BadParameter('Ticket number is required')
+
+    if re.match(r'^[a-zA-Z]+-\d+', name):
+        return name
+
+    raise click.BadParameter('Invalid ticket format {}'.format(name))
+
+
+def validate_ticket_arg_or_pull_from_branch(ctx, param, name):
+    """Verify issue id format and return issue slug"""
+    if name is None:
+        logger.debug('Ticket id not provided, search the current branch')
+        branch_name = subprocess.check_output([
+            'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+        ])
+        name_result = re.match(
+            r'^[a-zA-Z]+-?/?([a-zA-Z]+-\d+).*', branch_name.strip())
+        if name_result is None:
+            raise click.BadParameter('Ticket number is required')
+
+        else:
+            logger.debug('Found ticket id: {}'.format(name_result.group(1)))
+            return name_result.group(1)
 
     if re.match(r'^[a-zA-Z]+-\d+', name):
         return name
@@ -460,7 +497,7 @@ def start_hotfix(apis, ticket):
 @start.command('releasefix')
 @click.option(
     '-v', '--version',
-    callback=validate_version_arg,
+    callback=validate_version_arg_or_latest_prerelease,
     help='Major version number of the release to fix')
 @click.option(
     '-t', '--ticket',
@@ -562,7 +599,7 @@ def review_flake8(apis, branch):
 @review.command('feature')
 @click.option(
     '-t', '--ticket',
-    callback=validate_ticket_arg,
+    callback=validate_ticket_arg_or_pull_from_branch,
     help='Feature branch / ticket name')
 @click.pass_obj
 def review_feature(apis, ticket):
@@ -593,7 +630,7 @@ def review_feature(apis, ticket):
 @review.command('hotfix')
 @click.option(
     '-t', '--ticket',
-    callback=validate_ticket_arg,
+    callback=validate_ticket_arg_or_pull_from_branch,
     help='Hotfix branch / ticket name')
 @click.pass_obj
 def review_hotfix(apis, ticket):
@@ -625,11 +662,11 @@ def review_hotfix(apis, ticket):
 @review.command('releasefix')
 @click.option(
     '-v', '--version',
-    callback=validate_version_arg,
+    callback=validate_version_arg_or_latest_prerelease,
     help='Major version number of the release to fix')
 @click.option(
     '-t', '--ticket',
-    callback=validate_ticket_arg,
+    callback=validate_ticket_arg_or_pull_from_branch,
     help='Feature branch / ticket name')
 @click.pass_obj
 def review_releasefix(apis, ticket, version):
