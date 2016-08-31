@@ -96,7 +96,7 @@ def validate_version_arg(ctx, param, version):
     if re.match(r'^(?:\.?\d+){4,5}$', version):
         return version
 
-    raise click.BadParameter('Invalid versom format: {}'.format(version))
+    raise click.BadParameter('Invalid version format: {}'.format(version))
 
 
 def validate_version_arg_or_latest_prerelease(ctx, param, version):
@@ -111,7 +111,7 @@ def validate_version_arg_or_latest_prerelease(ctx, param, version):
     if re.match(r'^(?:\.?\d+){4,5}$', version):
         return version
 
-    raise click.BadParameter('Invalid versom format: {}'.format(version))
+    raise click.BadParameter('Invalid version format: {}'.format(version))
 
 
 def validate_ticket_arg(ctx, param, name):
