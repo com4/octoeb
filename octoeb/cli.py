@@ -671,7 +671,7 @@ def review_hotfix(apis, ticket):
 @click.pass_obj
 def review_releasefix(apis, ticket, version):
     """Create PR for a release bugfix branch"""
-    release_branch = 'release-{}'.format(version)
+    release_branch = 'release-{}'.format(extract_major_version(version))
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
@@ -688,7 +688,7 @@ def review_releasefix(apis, ticket, version):
         name = '{}:{}'.format(fork.owner, fix_branch)
         title = 'ReleaseFix {ticket}: {summary}'.format(
             ticket=ticket, summary=summary)
-        body = git.log_messages('master', fix_branch)
+        body = git.log_messages(release_branch, fix_branch)
         resp = api.create_pull_request(release_branch, name, title, body)
         click.launch(resp.get('html_url'))
         sys.exit()
