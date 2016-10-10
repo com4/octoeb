@@ -125,7 +125,7 @@ def changelog(log, ticket_ids=False):
                 m[0].upper(),
                 m[1].replace(u'-', u' ').replace(u'_', u' ').title()
             )
-        changelog = u'\n'.join(sorted(changelog))
+        changelog = u'\n'.join(sorted(set(changelog)))
 
     if ticket_ids:
         return jira_issues, changelog
