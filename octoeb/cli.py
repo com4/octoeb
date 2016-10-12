@@ -737,6 +737,8 @@ def release(apis, version):
     """Publish release on GitHub"""
     api = apis.get('mainline')
 
+    git.fetch('mainline')
+
     current_release = api.latest_release()
 
     log = ''
