@@ -62,7 +62,6 @@ import subprocess
 import sys
 
 import click
-import requests
 
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
@@ -71,6 +70,11 @@ from octoeb.utils import python
 from octoeb.utils import migrations
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
+
+try:
+    import slacker
+except ImportError:
+    slacker = None
 
 
 logger = logging.getLogger(__name__)
@@ -189,8 +193,15 @@ def cli(ctx):
             config.get('bugtracker', 'USER'),
             config.get('bugtracker', 'TOKEN'),
             config.items('bugtracker')
-        )
+        ),
     }
+
+    if slacker:
+        try:
+            ctx.obj['slack'] = slacker.Slacker(
+                config.get('slack', 'API_TOKEN'))
+        except ConfigParser.NoSectionError:
+            pass
 
 
 @cli.command()
@@ -350,6 +361,7 @@ def start_release(apis, version):
 
     try:
         git.fetch('mainline')
+        git.checkout(name)
         log = git.log(
             'mainline/master', 'mainline/{}'.format(name), merges=True)
         changelog = git.changelog(log)
@@ -357,27 +369,27 @@ def start_release(apis, version):
         click.echo('Changelog:')
         click.echo(changelog)
 
-        logger.info('Creating slack channel')
-        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
-        slack_create_url = (
-            'https://zyhpsjavp8.execute-api.us-west-2.amazonaws.com'
-            '/slack_prod/slack/slash-commands/release-channel'
-        )
-        logger.info('Channel name: {}'.format(channel_name))
+        audit = audit_changes('mainline/master', name)
 
-        try:
-            resp = requests.post(
-                slack_create_url,
-                data={
-                    'channel_id': channel_name,
-                    'text': channel_name
-                })
-            logger.debug(resp)
-        except Exception as e:
-            sys.exit(e.message)
-        finally:
-            logger.info('Tagging new version for qa')
-            qa(apis, version)
+        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
+        jira = apis.get('jira')
+        ticket_id, ticket_name = jira.create_issue(
+            summary='Release {}'.format(major_version),
+            description='Changelog: \n{}\n\n{}'.format(changelog, audit),
+            type='RELEASE')
+        channel_topic = 'Release Ticket: https://eventboard.atlassian.net/' \
+            'browse/{}'.format(ticket_name)
+
+        channel_text = '{}\n```\n{}\n\n{}\n```'.format(
+            channel_topic, changelog, audit)
+
+        logger.info('Creating slack channel: {}'.format(channel_name))
+
+        if apis.get('slack', None):
+            create_release_channel(
+                apis.get('slack', None), channel_name,
+                channel_topic, channel_text)
+
     except Exception as e:
         sys.exit(e.message)
     finally:
@@ -386,6 +398,32 @@ def start_release(apis, version):
         click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
     sys.exit()
+
+
+def create_release_channel(slack, name, topic, text):
+    """Create a release channel in slack.
+
+    If slacker is installed, and you have the token in your config, create a
+    release channel and invite interested parties.
+
+    Args:
+       slack (slacker.Slacker): Slack api
+       name (str): The name of the channel
+       topic (str): The channel topic
+       text (str): Text to post in the channel
+    """
+
+    resp = slack.channels.join(name)
+    channel_id = resp.body['channel']['id']
+    slack.channels.set_topic(channel=channel_id, topic=topic)
+    resp = slack.usergroups.users.list('S0JT9FNMD')
+    for user_id in resp.body['users']:
+        try:
+            slack.channels.invite(channel_id, user_id)
+        except:
+            pass
+
+    slack.chat.post_message(name, text)
 
 
 def get_deploy_relavent_changes(base, head):
@@ -463,7 +501,8 @@ def changelog(apis, base, head):
     logger.debug(log)
     ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
-    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(changes=changelog))
+    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(
+        changes=changelog))
     click.echo('\n{audit}'.format(audit=audit_changes(base, head)))
 
 

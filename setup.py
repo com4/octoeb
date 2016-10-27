@@ -11,6 +11,7 @@ setup(
         'click',
         'python-slugify',
         'requests',
+        'slacker',
     ],
     entry_points={
         'console_scripts': [
