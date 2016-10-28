@@ -207,6 +207,23 @@ def cli(ctx):
             pass
 
 
+def get_config_value(config, section, option, default=None):
+    """Provide a getter for configparser that supports a default.
+
+    ConfigParser should have had this from the get go.
+
+    Args:
+        config (ConfigParser): The ``ConfigParser``
+        section (str): The section the setting is in
+        option (str): The name of the option
+        default (object): The optional default.
+    """
+    try:
+        return config.get(section, option)
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        return default
+
+
 @cli.command()
 @click.pass_obj
 def sync(ctx):
@@ -377,10 +394,16 @@ def start_release(ctx, version):
 
         channel_name = 'release_{}'.format(major_version.replace('.', '_'))
         jira = apis.get('jira')
+
+        ticket_project = get_config_value(
+            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_PROJECT', 'MAN')
+        ticket_type = get_config_value(
+            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_TYPE', 'RELEASE')
+
         ticket_id, ticket_name = jira.create_issue(
             summary='Release {}'.format(major_version),
             description='Changelog: \n{}\n\n{}'.format(changelog, audit),
-            type='RELEASE')
+            type=ticket_type, project=ticket_project)
         channel_topic = 'Release Ticket: https://eventboard.atlassian.net/' \
             'browse/{}'.format(ticket_name)
 
@@ -389,11 +412,8 @@ def start_release(ctx, version):
 
         logger.info('Creating slack channel: {}'.format(channel_name))
 
-        # current group ID is: S0JT9FNMD
-        try:
-            group_id = ctx.get('config').get('slack', 'GROUP_ID')
-        except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
-            group_id = None
+        group_id = get_config_value(
+            ctx.get('config'), 'slack', 'GROUP_ID', 'S0JT9FNMD')
 
         if apis.get('slack', None):
             create_release_channel(

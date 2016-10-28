@@ -168,8 +168,8 @@ class JiraAPI(object):
 
         return sorted(x[1] for x in in_progress_transitions)
 
-    def create_issue(self, summary, description='', project='MAN', type='Bug',
-                     raise_for_status=True):
+    def create_issue(self, summary, description='', project='MAN',
+                     type='RELEASE', raise_for_status=True):
         """Create a new issue.
 
         Args:
