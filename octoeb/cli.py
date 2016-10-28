@@ -62,7 +62,6 @@ import subprocess
 import sys
 
 import click
-import requests
 
 from octoeb.utils.formatting import extract_major_version
 from octoeb.utils.formatting import validate_config
@@ -71,6 +70,11 @@ from octoeb.utils import python
 from octoeb.utils import migrations
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
+
+try:
+    import slacker
+except ImportError:
+    slacker = None
 
 
 logger = logging.getLogger(__name__)
@@ -172,30 +176,57 @@ def cli(ctx):
         sys.exit('ERROR: {}'.format(e.message))
 
     ctx.obj = {
-        'mainline': GitHubAPI(
-            config.get('repo', 'USER'),
-            config.get('repo', 'TOKEN'),
-            config.get('repo', 'OWNER'),
-            config.get('repo', 'REPO')
-        ),
-        'fork': GitHubAPI(
-            config.get('repo', 'USER'),
-            config.get('repo', 'TOKEN'),
-            config.get('repo', 'FORK'),
-            config.get('repo', 'REPO')
-        ),
-        'jira': JiraAPI(
-            config.get('bugtracker', 'BASE_URL'),
-            config.get('bugtracker', 'USER'),
-            config.get('bugtracker', 'TOKEN'),
-            config.items('bugtracker')
-        )
+        'apis': {
+            'mainline': GitHubAPI(
+                config.get('repo', 'USER'),
+                config.get('repo', 'TOKEN'),
+                config.get('repo', 'OWNER'),
+                config.get('repo', 'REPO')
+            ),
+            'fork': GitHubAPI(
+                config.get('repo', 'USER'),
+                config.get('repo', 'TOKEN'),
+                config.get('repo', 'FORK'),
+                config.get('repo', 'REPO')
+            ),
+            'jira': JiraAPI(
+                config.get('bugtracker', 'BASE_URL'),
+                config.get('bugtracker', 'USER'),
+                config.get('bugtracker', 'TOKEN'),
+                config.items('bugtracker')
+            ),
+        },
+        'config': config,
     }
+
+    if slacker:
+        try:
+            ctx.obj['apis']['slack'] = slacker.Slacker(
+                config.get('slack', 'API_TOKEN'))
+        except ConfigParser.NoSectionError:
+            pass
+
+
+def get_config_value(config, section, option, default=None):
+    """Provide a getter for configparser that supports a default.
+
+    ConfigParser should have had this from the get go.
+
+    Args:
+        config (ConfigParser): The ``ConfigParser``
+        section (str): The section the setting is in
+        option (str): The name of the option
+        default (object): The optional default.
+    """
+    try:
+        return config.get(section, option)
+    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        return default
 
 
 @cli.command()
 @click.pass_obj
-def sync(apis):
+def sync(ctx):
     """Sync fork with mainline
 
     Checkout each core branch (master and develop), pull from `mainline`, then
@@ -245,7 +276,7 @@ def sync(apis):
     help='Set the base branch to update from',
 )
 @click.pass_obj
-def update(apis, base):
+def update(ctx, base):
     """Update local branch from the upstream base
 
     Rebase the local branch with any changes from the upstream copy of the base
@@ -322,7 +353,7 @@ def update(apis, base):
 
 @cli.group()
 @click.pass_obj
-def start(apis):
+def start(ctx):
     """Start new branch for a fix, feature, or a new release"""
     pass
 
@@ -333,8 +364,9 @@ def start(apis):
     callback=validate_version_arg,
     help='Major version number of the release to start')
 @click.pass_obj
-def start_release(apis, version):
+def start_release(ctx, version):
     """Start new version branch"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     try:
         major_version = extract_major_version(version)
@@ -350,6 +382,7 @@ def start_release(apis, version):
 
     try:
         git.fetch('mainline')
+        git.checkout(name)
         log = git.log(
             'mainline/master', 'mainline/{}'.format(name), merges=True)
         changelog = git.changelog(log)
@@ -357,28 +390,38 @@ def start_release(apis, version):
         click.echo('Changelog:')
         click.echo(changelog)
 
-        logger.info('Creating slack channel')
-        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
-        slack_create_url = (
-            'https://zyhpsjavp8.execute-api.us-west-2.amazonaws.com'
-            '/slack_prod/slack/slash-commands/release-channel'
-        )
-        logger.info('Channel name: {}'.format(channel_name))
+        audit = audit_changes('mainline/master', name)
 
-        try:
-            resp = requests.post(
-                slack_create_url,
-                data={
-                    'channel_id': channel_name,
-                    'text': channel_name
-                })
-            logger.debug(resp)
-        except Exception as e:
-            sys.exit(e.message)
-        finally:
-            logger.info('Tagging new version for qa')
-            qa(apis, version)
+        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
+        jira = apis.get('jira')
+
+        ticket_project = get_config_value(
+            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_PROJECT', 'MAN')
+        ticket_type = get_config_value(
+            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_TYPE', 'RELEASE')
+
+        ticket_id, ticket_name = jira.create_issue(
+            summary='Release {}'.format(major_version),
+            description='Changelog: \n{}\n\n{}'.format(changelog, audit),
+            type=ticket_type, project=ticket_project)
+        channel_topic = 'Release Ticket: https://eventboard.atlassian.net/' \
+            'browse/{}'.format(ticket_name)
+
+        channel_text = '{}\n```\n{}\n\n{}\n```'.format(
+            channel_topic, changelog, audit)
+
+        logger.info('Creating slack channel: {}'.format(channel_name))
+
+        group_id = get_config_value(
+            ctx.get('config'), 'slack', 'GROUP_ID', 'S0JT9FNMD')
+
+        if apis.get('slack', None):
+            create_release_channel(
+                apis.get('slack', None), channel_name,
+                channel_topic, channel_text, group_id)
+
     except Exception as e:
+        print(e.message)
         sys.exit(e.message)
     finally:
         click.echo('Branch: {} created'.format(name))
@@ -386,6 +429,36 @@ def start_release(apis, version):
         click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
     sys.exit()
+
+
+def create_release_channel(slack, name, topic, text, group_id=None):
+    """Create a release channel in slack.
+
+    If slacker is installed, and you have the token in your config, create a
+    release channel and invite interested parties.
+
+    Args:
+        slack (slacker.Slacker): Slack api
+        name (str): The name of the channel
+        topic (str): The channel topic
+        text (str): Text to post in the channel
+        group_id (str): The group ID containing the list of users you want to
+            invite to the newly created release channel.
+    """
+
+    resp = slack.channels.join(name)
+    channel_id = resp.body['channel']['id']
+    slack.channels.set_topic(channel=channel_id, topic=topic)
+
+    if group_id:
+        resp = slack.usergroups.users.list(group_id)
+        for user_id in resp.body['users']:
+            try:
+                slack.channels.invite(channel_id, user_id)
+            except:
+                pass
+
+    slack.chat.post_message(name, text)
 
 
 def get_deploy_relavent_changes(base, head):
@@ -457,13 +530,14 @@ def audit_changes(base, head, txt=False):
     default='master',
     help='Name of the branch to compare the history starting from.')
 @click.pass_obj
-def changelog(apis, base, head):
+def changelog(ctx, base, head):
     """Get changelog between base branch and head branch"""
     log = git.log(base, head, merges=True)
     logger.debug(log)
     ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
-    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(changes=changelog))
+    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(
+        changes=changelog))
     click.echo('\n{audit}'.format(audit=audit_changes(base, head)))
 
 
@@ -473,8 +547,9 @@ def changelog(apis, base, head):
     callback=validate_ticket_arg,
     help='ID of ticket reporting the bug to be fixed, slug will be generated')
 @click.pass_obj
-def start_hotfix(apis, ticket):
+def start_hotfix(ctx, ticket):
     """Start new hotfix branch"""
+    apis = ctx.get('apis')
     api = apis.get('fork')
     jira = apis.get('jira')
     try:
@@ -504,8 +579,9 @@ def start_hotfix(apis, ticket):
     callback=validate_ticket_arg,
     help='ID of ticket reporting the bug to be fixed, slug will be generated')
 @click.pass_obj
-def start_releasefix(apis, version, ticket):
+def start_releasefix(ctx, version, ticket):
     """Start new hotfix for a pre-release"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
@@ -549,8 +625,9 @@ def start_releasefix(apis, version, ticket):
     callback=validate_ticket_arg,
     help='ID of ticket defining the feature, slug will be generated')
 @click.pass_obj
-def start_feature(apis, ticket):
+def start_feature(ctx, ticket):
     """Start new feature branch"""
+    apis = ctx.get('apis')
     api = apis.get('fork')
     jira = apis.get('jira')
     try:
@@ -572,7 +649,7 @@ def start_feature(apis, ticket):
 
 @cli.group()
 @click.pass_obj
-def review(apis):
+def review(ctx):
     """Create PR to review your code"""
     pass
 
@@ -583,7 +660,7 @@ def review(apis):
     default='develop',
     help='Base branch to diff with')
 @click.pass_obj
-def review_flake8(apis, branch):
+def review_flake8(ctx, branch):
     """Run flake8 on the diff between the current branch the provided base"""
     try:
         issues = python.check_flake8_issues(branch)
@@ -602,8 +679,9 @@ def review_flake8(apis, branch):
     callback=validate_ticket_arg_or_pull_from_branch,
     help='Feature branch / ticket name')
 @click.pass_obj
-def review_feature(apis, ticket):
+def review_feature(ctx, ticket):
     """Create PR for a feature branch"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
@@ -633,8 +711,9 @@ def review_feature(apis, ticket):
     callback=validate_ticket_arg_or_pull_from_branch,
     help='Hotfix branch / ticket name')
 @click.pass_obj
-def review_hotfix(apis, ticket):
+def review_hotfix(ctx, ticket):
     """Create PR for a hotfix branch"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
@@ -669,9 +748,10 @@ def review_hotfix(apis, ticket):
     callback=validate_ticket_arg_or_pull_from_branch,
     help='Feature branch / ticket name')
 @click.pass_obj
-def review_releasefix(apis, ticket, version):
+def review_releasefix(ctx, ticket, version):
     """Create PR for a release bugfix branch"""
     release_branch = 'release-{}'.format(extract_major_version(version))
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
     jira = apis.get('jira')
@@ -702,9 +782,9 @@ def review_releasefix(apis, ticket, version):
     callback=validate_version_arg,
     help='Full version number of the release to QA (pre-release)')
 @click.pass_obj
-def start_prerelease(apis, version):
+def start_prerelease(ctx, version):
     """Publish pre-release on GitHub for QA."""
-    qa(apis, version)
+    qa(ctx, version)
 
 
 def qa(apis, version):
@@ -733,8 +813,9 @@ def qa(apis, version):
     callback=validate_version_arg,
     help='Full version number of the release to publish')
 @click.pass_obj
-def release(apis, version):
+def release(ctx, version):
     """Publish release on GitHub"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
 
     git.fetch('mainline')
@@ -758,8 +839,9 @@ def release(apis, version):
 
 @cli.command()
 @click.pass_obj
-def versions(apis):
+def versions(ctx):
     """Get the current release and pre-release versions on GitHub"""
+    apis = ctx.get('apis')
     api = apis.get('mainline')
 
     current_release = api.latest_release()
@@ -787,8 +869,9 @@ def versions(apis):
     help='GitHubAPI method arguments'
 )
 @click.pass_obj
-def call_method(apis, target, method_name, method_args):
+def call_method(ctx, target, method_name, method_args):
     """(DEV) Call GitHubAPI directly"""
+    apis = ctx.get('apis')
     api = apis.get(target)
     try:
         click.echo(getattr(api, method_name)(*method_args))
@@ -808,8 +891,9 @@ def call_method(apis, target, method_name, method_args):
     help='JIRA method arguments'
 )
 @click.pass_obj
-def call_jira_method(apis, method_name, method_args):
+def call_jira_method(ctx, method_name, method_args):
     """(DEV) Call JiraAPI mehtod directly"""
+    apis = ctx.get('apis')
     jira = apis.get('jira')
     try:
         click.echo(getattr(jira, method_name)(*method_args))

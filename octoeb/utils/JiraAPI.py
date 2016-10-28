@@ -50,7 +50,7 @@ class JiraAPI(object):
 
     def post(self, path, raise_for_status=True, **kwargs):
         """POST to path on JIRA"""
-        logger.debug('JiraAPI.post: path={}, kwargs={}'.format(kwargs))
+        logger.debug('JiraAPI.post: path={}, kwargs={}'.format(path, kwargs))
 
         resp = requests.post(
             self.build_path(path), auth=self.auth, **kwargs
@@ -168,6 +168,43 @@ class JiraAPI(object):
 
         return sorted(x[1] for x in in_progress_transitions)
 
+    def create_issue(self, summary, description='', project='MAN',
+                     type='RELEASE', raise_for_status=True):
+        """Create a new issue.
+
+        Args:
+            project (str): The name of the project
+            type (str): The ticket type
+            summary (str): The issue summary
+            description (str): The description of the issue)
+            raise_for_status (bool): Set to True to raise an exception for a
+                non-successful status message.
+
+        Returns:
+            (str, str): The ticket ID, the ticket name
+        """
+        endpoint = 'issue'
+        payload = {
+            'fields': {
+                'project': {
+                    'key': project,
+                },
+                'summary': summary,
+                'description': description,
+                'issuetype': {
+                    'name': type,
+                },
+            },
+        }
+
+        logger.debug('JiraAPI.create_issue: project={}, type={}'.format(
+            project, type))
+
+        resp = self.post(
+            endpoint, json=payload, raise_for_status=raise_for_status)
+
+        return resp.get('id'), resp.get('key')
+
     def start_issue(self, id, raise_for_status=True):
         """Transition the issue to 'Start'"""
         endpoint = 'issue/{}/transitions'.format(id)
@@ -182,12 +219,10 @@ class JiraAPI(object):
             )
         )
         logger.debug('payload: {}'.format(payload))
-        resp = self.post(endpoint, json=payload)
+        resp = self.post(endpoint, json=payload,
+                         raise_for_status=raise_for_status)
 
-        if raise_for_status:
-            resp.raise_for_status()
-
-        return None
+        return resp
 
     def get_status_categories(self):
         logger.debug('JiraAPI.get_status_categories')

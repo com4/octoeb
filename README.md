@@ -8,8 +8,8 @@ simplifies the process so that it is executed the same way by each developer
 each time.
 
 ## Installation
-The only external library that this tool depends on is Requests and Click.  
-Clone the repo run
+The only external library that this tool depends on is Requests and Click.
+Clone the repo and run
 
     pip install --editable .
 
@@ -37,6 +37,9 @@ expect this file to contain the following ini-style configuration:
     TOKEN=pwd
     TICKET_FILTER_ID=123
 
+    [slack]
+    API_TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
+
 In `repo`
 
 1. OWNER and REPO are https://github.com/OWNER/REPO when you visit a repo on
@@ -50,6 +53,17 @@ In `bugtracker`
 1. USER is your login email for JIRA`
 2. TOKEN is your JIRA password
 3. TICKET_FILTER_ID is the search filter used for tab completion of ticket ids
+4. RELEASE_TICKET_PROJECT is the project the release ticket should be created
+   in.  Default is `MAN`
+5. RELEASE_TICKET_TYPE is the type of ticket to use.  Default is `RELEASE`
+
+In `slack`
+
+Requires that you have the `slacker` python package installed.  If you do not,
+a slack channel will not be created.
+
+1. API_TOKEN is your slack API token. Obtain a token here:
+   https://api.slack.com/tokens
 
 ### Usage
 There are three major command `start`, `qa`, and `release`. Enter
@@ -81,6 +95,6 @@ Clone, install as above,
 
     pip install --editable .
 
-Start coding!  Your changes will take immediate effect. 
+Start coding!  Your changes will take immediate effect.
 
 Author: Lucas Roesler <lucas@eventboard.io>

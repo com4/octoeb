@@ -121,7 +121,7 @@ def changelog(log, ticket_ids=False):
         for i, m in enumerate(changelog):
             # m[0] is the issue id
             # m[1] is the issue title
-            changelog[i] = u'{}: {}'.format(
+            changelog[i] = u'* {} : {}'.format(
                 m[0].upper(),
                 m[1].replace(u'-', u' ').replace(u'_', u' ').title()
             )
