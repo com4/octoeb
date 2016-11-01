@@ -202,7 +202,7 @@ def cli(ctx):
     if slacker:
         try:
             ctx.obj['apis']['slack'] = slacker.Slacker(
-                config.get('slack', 'API_TOKEN'))
+                config.get('slack', 'TOKEN'))
         except ConfigParser.NoSectionError:
             pass
 

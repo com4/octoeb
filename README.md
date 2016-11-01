@@ -38,7 +38,7 @@ expect this file to contain the following ini-style configuration:
     TICKET_FILTER_ID=123
 
     [slack]
-    API_TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
+    TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
 
 In `repo`
 
@@ -62,7 +62,7 @@ In `slack`
 Requires that you have the `slacker` python package installed.  If you do not,
 a slack channel will not be created.
 
-1. API_TOKEN is your slack API token. Obtain a token here:
+1. TOKEN is your slack API token. Obtain a token here:
    https://api.slack.com/tokens
 
 ### Usage
