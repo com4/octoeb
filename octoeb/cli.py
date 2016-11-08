@@ -789,7 +789,7 @@ def start_prerelease(ctx, version):
 
 def qa(ctx, version):
     """Publish pre-release on GitHub for QA."""
-    apis = cts.get('apis')
+    apis = ctx.get('apis')
     api = apis.get('mainline')
     name = 'release-{}'.format(extract_major_version(version))
 
