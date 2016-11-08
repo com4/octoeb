@@ -62,8 +62,8 @@ In `slack`
 Requires that you have the `slacker` python package installed.  If you do not,
 a slack channel will not be created.
 
-1. TOKEN is your slack API token. Obtain a token here:
-   https://api.slack.com/tokens
+1. API_TOKEN is your slack API token. Obtain a token here:
+   https://api.slack.com/docs/oauth-test-tokens
 
 ### Usage
 There are three major command `start`, `qa`, and `release`. Enter
