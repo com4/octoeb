@@ -106,7 +106,8 @@ def validate_version_arg(ctx, param, version):
 def validate_version_arg_or_latest_prerelease(ctx, param, version):
     if version is None:
         logger.debug('Version not provided, pulling latest from github')
-        version = ctx.obj.get('mainline').latest_prerelease().get('tag_name')
+        version = ctx.obj['apis'].\
+            get('mainline').latest_prerelease().get('tag_name')
         if version is None:
             raise click.BadParameter('Version number is required')
 
