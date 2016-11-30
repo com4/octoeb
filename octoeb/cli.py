@@ -429,6 +429,9 @@ def start_release(ctx, version):
         click.echo(branch.get('url'))
         click.echo('\tgit fetch --all && git checkout {}'.format(name))
 
+        # create pre-release tag
+        qa(ctx, version)
+
     sys.exit()
 
 
