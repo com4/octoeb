@@ -347,3 +347,9 @@ class GitHubAPI(object):
             raise
 
         return resp.json()
+
+    def get_statuses(self, ref):
+        logger.info('GitHubAPI.get_statuses')
+        resp = self.get('statuses/{ref}'.format(ref=ref))
+
+        return resp.content

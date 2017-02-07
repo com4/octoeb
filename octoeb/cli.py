@@ -421,6 +421,8 @@ def start_release(ctx, version):
                 apis.get('slack', None), channel_name,
                 channel_topic, channel_text, group_id)
 
+        qa(ctx, version)
+
     except Exception as e:
         print(e.message)
         sys.exit(e.message)
