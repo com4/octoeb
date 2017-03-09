@@ -63,7 +63,7 @@ import sys
 
 import click
 
-from octoeb.utils.formatting import extract_major_version
+from octoeb.utils.formatting import extract_release_branch_version
 from octoeb.utils.formatting import validate_config
 from octoeb.utils import git
 from octoeb.utils import python
@@ -370,7 +370,7 @@ def start_release(ctx, version):
     apis = ctx.get('apis')
     api = apis.get('mainline')
     try:
-        major_version = extract_major_version(version)
+        major_version = extract_release_branch_version(version)
         name = 'release-{}'.format(major_version)
         branch = api.create_release_branch(name)
     except GitHubAPI.DuplicateBranchError as e:
@@ -592,7 +592,7 @@ def start_releasefix(ctx, version, ticket):
     fork = apis.get('fork')
     jira = apis.get('jira')
 
-    release_name = 'release-{}'.format(extract_major_version(version))
+    release_name = 'release-{}'.format(extract_release_branch_version(version))
     try:
         base_release_branch = api.get_branch(release_name)
         release_sha = base_release_branch['object']['sha']
@@ -756,7 +756,7 @@ def review_hotfix(ctx, ticket):
 @click.pass_obj
 def review_releasefix(ctx, ticket, version):
     """Create PR for a release bugfix branch"""
-    release_branch = 'release-{}'.format(extract_major_version(version))
+    release_branch = 'release-{}'.format(extract_release_branch_version(version))
     apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
@@ -797,7 +797,7 @@ def qa(ctx, version):
     """Publish pre-release on GitHub for QA."""
     apis = ctx.get('apis')
     api = apis.get('mainline')
-    name = 'release-{}'.format(extract_major_version(version))
+    name = 'release-{}'.format(extract_release_branch_version(version))
 
     log = ''
     with git.on_branch(name):

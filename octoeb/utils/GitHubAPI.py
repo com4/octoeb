@@ -6,7 +6,9 @@ import logging
 
 import requests
 
-from octoeb.utils.formatting import extract_major_version
+from octoeb.utils.formatting import extract_year_week_version
+
+from octoeb.utils.formatting import extract_release_branch_version
 
 
 logger = logging.getLogger(__name__)
@@ -225,7 +227,8 @@ class GitHubAPI(object):
         return resp.json()
 
     def create_pre_release(self, release_name, body=""):
-        name = 'release-{}'.format(extract_major_version(release_name))
+        name = 'release-{}'.format(
+            extract_release_branch_version(release_name))
         release_branch = self.get_branch(name)
 
         try:
@@ -278,13 +281,14 @@ class GitHubAPI(object):
             - Exception
             - requests.exceptions.HTTPError
         """
-        release_version = extract_major_version(release_name)
+        release_version = extract_release_branch_version(release_name)
         # Assume that this is a new release
         # Check if the release branch is merged into master
         try:
             merge_status = self.compare(
                 'master',
-                'release-{}'.format(extract_major_version(release_name))
+                'release-{}'.format(
+                    extract_release_branch_version(release_name))
             ).get('status')
         except requests.exceptions.HTTPError as e:
             logger.debug('HTTPError: {}'.format(e.message))
@@ -300,11 +304,13 @@ class GitHubAPI(object):
 
         # if the release branch does not exist, then we end up here,
         # Assume that it is a hotfix
-        version = extract_major_version(self.latest_release().get('name', ''))
-        if version.startswith('release-'):
-            version = version[8:]
+        raw_version = self.latest_release().get('name', '')
+        if raw_version.startswith('release-'):
+            raw_version = raw_version[8:]
+
+        version = extract_year_week_version(raw_version)
         logger.debug(version)
-        if release_version != version:
+        if extract_year_week_version(release_version) != version:
             raise Exception(
                 'New release version does not match the current release, '
                 'we expected a hotfix.'
