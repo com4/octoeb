@@ -6,8 +6,10 @@ import logging
 
 import requests
 
+from octoeb.utils.config import get_config
+from octoeb.utils.formatting import build_release_base_name
+from octoeb.utils.formatting import build_release_name
 from octoeb.utils.formatting import extract_year_week_version
-
 from octoeb.utils.formatting import extract_release_branch_version
 
 
@@ -226,10 +228,9 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def create_pre_release(self, release_name, body=""):
-        name = 'release-{}'.format(
-            extract_release_branch_version(release_name))
-        release_branch = self.get_branch(name)
+    def create_pre_release(self, release_name, release_branch_name, body=""):
+
+        release_branch = self.get_branch(release_branch_name)
 
         try:
             self.get_release(release_name)
@@ -244,7 +245,7 @@ class GitHubAPI(object):
             release_info = {
                 "tag_name": release_name,
                 "target_commitish": release_branch['object']['sha'],
-                "name": 'release-{}'.format(release_name),
+                "name": release_branch_name,
                 "body": body,
                 "draft": False,
                 "prerelease": True
@@ -262,14 +263,14 @@ class GitHubAPI(object):
 
         return resp.json()
 
-    def check_release_status(self, release_name):
+    def check_release_status(self, release_name, release_branch):
         """Verify that the release is actually read to be released
 
         If the release is new (corresponds to a release branch), then we check
         that the release is merged into master.
 
-        If we can not find the release branch, we assume that it is a hotfix and
-        we verify that the major version number matches the latest release.
+        If we can not find the release branch, we assume that it is a hotfix
+        and we verify that the major version number matches the latest release.
 
         Args:
             release_name (str): the version number to release
@@ -282,13 +283,13 @@ class GitHubAPI(object):
             - requests.exceptions.HTTPError
         """
         release_version = extract_release_branch_version(release_name)
+        release_branch_base = build_release_base_name(get_config())
         # Assume that this is a new release
         # Check if the release branch is merged into master
         try:
             merge_status = self.compare(
                 'master',
-                'release-{}'.format(
-                    extract_release_branch_version(release_name))
+                release_branch
             ).get('status')
         except requests.exceptions.HTTPError as e:
             logger.debug('HTTPError: {}'.format(e.message))
@@ -305,8 +306,8 @@ class GitHubAPI(object):
         # if the release branch does not exist, then we end up here,
         # Assume that it is a hotfix
         raw_version = self.latest_release().get('name', '')
-        if raw_version.startswith('release-'):
-            raw_version = raw_version[8:]
+        if raw_version.startswith(release_branch_base):
+            raw_version = raw_version[len(release_branch_base):]
 
         version = extract_year_week_version(raw_version)
         logger.debug(version)
@@ -318,9 +319,9 @@ class GitHubAPI(object):
 
         return
 
-    def create_release(self, release_name, body=""):
+    def create_release(self, release_name, release_branch, body=""):
 
-        self.check_release_status(release_name)
+        self.check_release_status(release_name, release_branch)
 
         try:
             self.get_release(release_name)
@@ -336,7 +337,7 @@ class GitHubAPI(object):
             release_info = {
                 "tag_name": release_name,
                 "target_commitish": master['object']['sha'],
-                "name": 'release-{}'.format(release_name),
+                "name": release_branch,
                 "body": body,
                 "draft": False,
                 "prerelease": False

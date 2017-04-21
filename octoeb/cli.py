@@ -56,20 +56,22 @@ try:
 except ImportError:
     import configparser as ConfigParser
 import logging
-import os
 import re
 import subprocess
 import sys
 
 import click
 
+from octoeb.utils.formatting import build_release_name
 from octoeb.utils.formatting import extract_release_branch_version
-from octoeb.utils.formatting import validate_config
+from octoeb.utils.formatting import slackify_release_name
 from octoeb.utils import git
 from octoeb.utils import python
 from octoeb.utils import migrations
 from octoeb.utils.GitHubAPI import GitHubAPI
 from octoeb.utils.JiraAPI import JiraAPI
+from octoeb.utils.config import get_config
+from octoeb.utils.config import get_config_value
 
 try:
     import slacker
@@ -164,17 +166,7 @@ def validate_ticket_arg_or_pull_from_branch(ctx, param, name):
 def cli(ctx):
     """Eventboard releases script"""
     # Setup the API
-    config = ConfigParser.ConfigParser()
-    config.read([
-        os.path.expanduser('~/.config/octoeb'),
-        os.path.expanduser('~/.octoebrc'),
-        '.octoebrc'
-    ])
-
-    try:
-        validate_config(config)
-    except Exception as e:
-        sys.exit('ERROR: {}'.format(e.message))
+    config = get_config()
 
     ctx.obj = {
         'apis': {
@@ -206,23 +198,6 @@ def cli(ctx):
                 config.get('slack', 'TOKEN'))
         except ConfigParser.NoSectionError:
             pass
-
-
-def get_config_value(config, section, option, default=None):
-    """Provide a getter for configparser that supports a default.
-
-    ConfigParser should have had this from the get go.
-
-    Args:
-        config (ConfigParser): The ``ConfigParser``
-        section (str): The section the setting is in
-        option (str): The name of the option
-        default (object): The optional default.
-    """
-    try:
-        return config.get(section, option)
-    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
-        return default
 
 
 @cli.command()
@@ -371,7 +346,7 @@ def start_release(ctx, version):
     api = apis.get('mainline')
     try:
         major_version = extract_release_branch_version(version)
-        name = 'release-{}'.format(major_version)
+        name = build_release_name(ctx['config'], major_version)
         branch = api.create_release_branch(name)
     except GitHubAPI.DuplicateBranchError as e:
         git.fetch('mainline')
@@ -393,7 +368,7 @@ def start_release(ctx, version):
 
         audit = audit_changes('mainline/master', name)
 
-        channel_name = 'release_{}'.format(major_version.replace('.', '_'))
+        channel_name = slackify_release_name(name)
         jira = apis.get('jira')
 
         ticket_project = get_config_value(
@@ -592,7 +567,8 @@ def start_releasefix(ctx, version, ticket):
     fork = apis.get('fork')
     jira = apis.get('jira')
 
-    release_name = 'release-{}'.format(extract_release_branch_version(version))
+    release_name = build_release_name(
+        ctx['config'], extract_release_branch_version(version))
     try:
         base_release_branch = api.get_branch(release_name)
         release_sha = base_release_branch['object']['sha']
@@ -756,7 +732,10 @@ def review_hotfix(ctx, ticket):
 @click.pass_obj
 def review_releasefix(ctx, ticket, version):
     """Create PR for a release bugfix branch"""
-    release_branch = 'release-{}'.format(extract_release_branch_version(version))
+    release_branch = build_release_name(
+        ctx['config'],
+        extract_release_branch_version(version)
+    )
     apis = ctx.get('apis')
     api = apis.get('mainline')
     fork = apis.get('fork')
@@ -797,7 +776,8 @@ def qa(ctx, version):
     """Publish pre-release on GitHub for QA."""
     apis = ctx.get('apis')
     api = apis.get('mainline')
-    name = 'release-{}'.format(extract_release_branch_version(version))
+    name = build_release_name(
+        ctx['config'], extract_release_branch_version(version))
 
     log = ''
     with git.on_branch(name):
@@ -808,7 +788,7 @@ def qa(ctx, version):
         changelog = '**Changes:**\n{}'.format(changelog)
 
     try:
-        api.create_pre_release(version, body=changelog)
+        api.create_pre_release(version, name, body=changelog)
         sys.exit()
     except Exception as e:
         sys.exit(e.message)
@@ -838,7 +818,11 @@ def release(ctx, version):
         changelog = '**Changes:**\n{}'.format(changelog)
 
     try:
-        api.create_release(version, body=changelog)
+        api.create_release(
+            version,
+            build_release_name(ctx['config'], version),
+            body=changelog
+        )
         sys.exit()
     except Exception as e:
         sys.exit(e.message)
@@ -907,6 +891,7 @@ def call_jira_method(ctx, method_name, method_args):
         sys.exit()
     except Exception as e:
         sys.exit(e.message)
+
 
 if __name__ == '__main__':
     cli()
