@@ -39,6 +39,7 @@ expect this file to contain the following ini-style configuration:
 
     [slack]
     TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
+    GROUP_ID=S1JT6FNQR
 
     [release]
     PREFIX=Boaty
@@ -68,6 +69,8 @@ a slack channel will not be created.
 
 1. API_TOKEN is your slack API token. Obtain a token here:
    https://api.slack.com/custom-integrations/legacy-tokens
+2. GROUP_ID indicated the group that will automatically be added to the
+   release channel that is created.
 
 In `release`
 
