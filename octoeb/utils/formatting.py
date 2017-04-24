@@ -6,8 +6,30 @@ from __future__ import unicode_literals
 import logging
 import re
 
+from octoeb.utils.config import get_config_value
+
 
 logger = logging.getLogger(__name__)
+
+
+def build_release_base_name(config):
+    parts = (
+        get_config_value(config, 'release', 'PREFIX', None),
+        get_config_value(config, 'release', 'MAIN', 'release'),
+    )
+    return '-'.join((x for x in parts if x))
+
+
+def build_release_name(config, version):
+    parts = (
+        build_release_base_name(config),
+        version,
+    )
+    return '-'.join((x for x in parts if x))
+
+
+def slackify_release_name(release_name):
+    return release_name.replace('-', '_').replace('.', '_')
 
 
 def extract_major_version(version):
@@ -27,17 +49,6 @@ def extract_release_branch_version(version):
     version_nums[-1] = '01'
 
     return '.'.join(version_nums)
-
-
-def validate_config(config):
-    assert config.has_section('repo'), 'Missing repo config'
-    assert config.has_option('repo', 'USER'), 'Missing USER name in config'
-    assert config.has_option('repo', 'TOKEN'), 'Missing TOKEN in config'
-    assert config.has_option('repo', 'REPO'), 'Missing REPO name in config'
-    assert config.has_option('repo', 'FORK'), 'Missing FORK name in config'
-    assert config.has_option('repo', 'OWNER'), \
-        'Missing mainline OWNER name in config'
-    assert config.has_section('bugtracker'), 'Missing bugtracker section'
 
 
 def validate_ticket_name(name):

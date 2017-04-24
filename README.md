@@ -39,6 +39,11 @@ expect this file to contain the following ini-style configuration:
 
     [slack]
     TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
+    GROUP_ID=S1JT6FNQR
+
+    [release]
+    PREFIX=Boaty
+    MAIN=McBoatFace
 
 In `repo`
 
@@ -63,7 +68,17 @@ Requires that you have the `slacker` python package installed.  If you do not,
 a slack channel will not be created.
 
 1. API_TOKEN is your slack API token. Obtain a token here:
-   https://api.slack.com/docs/oauth-test-tokens
+   https://api.slack.com/custom-integrations/legacy-tokens
+2. GROUP_ID indicated the group that will automatically be added to the
+   release channel that is created.
+
+In `release`
+
+This section is optional, but allows you to control the release branch and
+channel names, these names will match `prefix-main-version` and
+`prefix_main_version` respectively per the configuration in this section.
+By default, the prefix is empty and releases will be named, e.g.
+`release-1.1.01`.
 
 ### Usage
 There are three major command `start`, `qa`, and `release`. Enter
