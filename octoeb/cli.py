@@ -820,7 +820,10 @@ def release(ctx, version):
     try:
         api.create_release(
             version,
-            build_release_name(ctx['config'], version),
+            build_release_name(
+                ctx['config'],
+                extract_release_branch_version(version)
+            ),
             body=changelog
         )
         sys.exit()

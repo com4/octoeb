@@ -282,6 +282,9 @@ class GitHubAPI(object):
             - Exception
             - requests.exceptions.HTTPError
         """
+        logger.debug('GitHubAPI.check_release_status args: {}; {}'.format(
+            release_name, release_branch)
+        )
         release_version = extract_release_branch_version(release_name)
         release_branch_base = build_release_base_name(get_config())
         # Assume that this is a new release
@@ -321,6 +324,9 @@ class GitHubAPI(object):
 
     def create_release(self, release_name, release_branch, body=""):
 
+        logger.info("GithubAPI.create_release: {}; {}".format(
+            release_name, release_branch))
+        logger.info("GithubAPI.create_release body: {}".format(body))
         self.check_release_status(release_name, release_branch)
 
         try:
