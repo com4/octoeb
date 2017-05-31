@@ -8,9 +8,12 @@ import logging
 import re
 import subprocess
 
+
+from octoeb.utils.config import get_config
+from octoeb.utils.config import get_config_value
+
+
 logger = logging.getLogger(__name__)
-changelog_re = re.compile(
-    r'merge pull request #\d+ from .*(?:[/-]([a-z]{2,4}-\d+)-(.*))', re.I)
 
 
 class GitError(Exception):
@@ -29,15 +32,9 @@ def update(base_branch):
     return subprocess.call(['git', 'pull', '-r', base_branch])
 
 
-issue_re = re.compile(
-    r'merge pull request #\d+ from .*(?:[/-]([a-z]+-\d+))', re.I)
-changelog_re = re.compile(
-    r'merge pull request #\d+ from .*(?:[/-]([a-z]{2,4}-\d+)-(.*))', re.I)
 staticfiles_re = re.compile(r'^[AMD].*static.*', re.I)
 pip_re = re.compile(r'M.*requirements.*', re.I)
 migrations_re = re.compile(r'A.*migrations.*', re.I)
-
-
 integrations_re = re.compile(r'M.*integrations', re.I)
 
 
@@ -110,6 +107,19 @@ def changelog(log, ticket_ids=False):
     Returns:
         str or tuple.
     """
+
+    config = get_config()
+    changelog_re_pattern = get_config_value(
+        config, 'repo', 'changelog_re',
+        "merge pull request #\d+ from .*(?:[/-]([a-z]{2,4}-\d+)-(.*))"
+    )
+    issue_re_pattern = get_config_value(
+        config, 'repo', 'issue_re',
+        "merge pull request #\d+ from .*(?:[/-]([a-z]+-\d+))")
+
+    issue_re = re.compile(issue_re_pattern, re.I)
+    changelog_re = re.compile(changelog_re_pattern, re.I)
+
     try:
         jira_issues = issue_re.findall(log)
         changelog = changelog_re.findall(log)
