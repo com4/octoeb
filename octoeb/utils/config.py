@@ -14,6 +14,7 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+CACHE = {}
 
 
 def get_config(validate=True):
@@ -23,6 +24,12 @@ def get_config(validate=True):
         ConfigParser config object.
     """
     logger.debug('Get config')
+
+    cached_config = CACHE.get('config')
+    if cached_config:
+        logger.debug('Config from cache')
+        return cached_config
+
     config = ConfigParser.ConfigParser()
     config.read([
         os.path.expanduser('~/.config/octoeb'),
@@ -37,6 +44,8 @@ def get_config(validate=True):
         validate_config(config)
     except Exception as e:
         sys.exit('ERROR: {}'.format(e.message))
+
+    CACHE['config'] = config
 
     return config
 
@@ -57,6 +66,7 @@ def get_config_value(config, section, option, default=None):
     try:
         return config.get(section, option)
     except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+        logger.debug('Return default value')
         return default
 
 
