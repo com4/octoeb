@@ -2,10 +2,15 @@ OctoEB
 ======
 ![python3](https://caniusepython3.com/check/c87b915f-dfb4-42eb-b0f2-ed5790a049ec.svg?style=flat)
 
-OctoEB is a script to help with the creation of GitHub releases for Eventboard
+OctoEB is a script to help with the creation of GitHub releases for Teem
 projects.  This is to help us avoid merge, branch, and tag issues. It also
 simplifies the process so that it is executed the same way by each developer
 each time.
+
+
+The goal is to make this git branching strategy as semantic as possible on the commandline
+
+![Teem Git Flow](https://s3-us-west-2.amazonaws.com/eventboard-docs/Teem+GitFlow+-+Page+1.png)
 
 ## Installation
 The only external library that this tool depends on is Requests and Click.
