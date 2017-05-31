@@ -133,6 +133,34 @@ def changelog(log, ticket_ids=False):
     return changelog
 
 
+def get_deploy_relavent_changes(base, head):
+    log_str = log(base, head)
+    staticfile_changes = find_staticfile_changes(log_str)
+    migration_changes = find_migrations_changes(log_str)
+    bower_changes = find_bower_changes(log_str)
+    pip_changes = find_requirements_changes(log_str)
+
+    if staticfile_changes:
+        staticfile_msg = 'Staticfile changes:\n{}'.format(
+            u'\n'.join(staticfile_changes))
+    else:
+        staticfile_msg = 'No staticfile changes'
+
+    if bower_changes:
+        bower_msg = 'Bower chagnes:\n{}'.format(
+            u'\n'.join(bower_changes))
+    else:
+        bower_msg = 'No bower changes'
+
+    if pip_changes:
+        pip_msg = 'Pip changes:\n{}'.format(
+            u'\n'.join(pip_changes))
+    else:
+        pip_msg = 'No pip changes'
+
+    return (staticfile_msg, bower_msg, pip_msg), migration_changes
+
+
 @contextmanager
 def on_branch(name, remote_name='mainline'):
     """Quickly out a branch and then revert to the orignal state.

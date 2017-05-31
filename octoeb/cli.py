@@ -68,10 +68,11 @@ from octoeb.utils.formatting import slackify_release_name
 from octoeb.utils import git
 from octoeb.utils import python
 from octoeb.utils import migrations
-from octoeb.utils.GitHubAPI import GitHubAPI
-from octoeb.utils.JiraAPI import JiraAPI
 from octoeb.utils.config import get_config
 from octoeb.utils.config import get_config_value
+from octoeb.utils.GitHubAPI import GitHubAPI
+from octoeb.utils.JiraAPI import JiraAPI
+from octoeb.utils.slack import create_release_channel
 
 try:
     import slacker
@@ -412,66 +413,8 @@ def start_release(ctx, version):
     sys.exit()
 
 
-def create_release_channel(slack, name, topic, text, group_id=None):
-    """Create a release channel in slack.
-
-    If slacker is installed, and you have the token in your config, create a
-    release channel and invite interested parties.
-
-    Args:
-        slack (slacker.Slacker): Slack api
-        name (str): The name of the channel
-        topic (str): The channel topic
-        text (str): Text to post in the channel
-        group_id (str): The group ID containing the list of users you want to
-            invite to the newly created release channel.
-    """
-
-    resp = slack.channels.join(name)
-    channel_id = resp.body['channel']['id']
-    slack.channels.set_topic(channel=channel_id, topic=topic)
-
-    if group_id:
-        resp = slack.usergroups.users.list(group_id)
-        for user_id in resp.body['users']:
-            try:
-                slack.channels.invite(channel_id, user_id)
-            except:
-                pass
-
-    slack.chat.post_message(name, text)
-
-
-def get_deploy_relavent_changes(base, head):
-    log = git.log(base, head)
-    staticfile_changes = git.find_staticfile_changes(log)
-    migration_changes = git.find_migrations_changes(log)
-    bower_changes = git.find_bower_changes(log)
-    pip_changes = git.find_requirements_changes(log)
-
-    if staticfile_changes:
-        staticfile_msg = 'Staticfile changes:\n{}'.format(
-            u'\n'.join(staticfile_changes))
-    else:
-        staticfile_msg = 'No staticfile changes'
-
-    if bower_changes:
-        bower_msg = 'Bower chagnes:\n{}'.format(
-            u'\n'.join(bower_changes))
-    else:
-        bower_msg = 'No bower changes'
-
-    if pip_changes:
-        pip_msg = 'Pip changes:\n{}'.format(
-            u'\n'.join(pip_changes))
-    else:
-        pip_msg = 'No pip changes'
-
-    return (staticfile_msg, bower_msg, pip_msg), migration_changes
-
-
 def audit_changes(base, head, txt=False):
-    changes_txt_list, migrations_list = get_deploy_relavent_changes(base, head)
+    changes_txt_list, migrations_list = git.get_deploy_relavent_changes(base, head)
     problem_migrations, sql_map = migrations.check_problem_sql(migrations_list)
 
     sql_msgs = []
