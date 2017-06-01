@@ -13,7 +13,7 @@ The goal is to make this git branching strategy as semantic as possible on the c
 ![Teem Git Flow](https://s3-us-west-2.amazonaws.com/eventboard-docs/Teem+GitFlow+-+Page+1.png)
 
 ## Installation
-The only external library that this tool depends on is Requests and Click.
+The only external libraries that this tool depends on is Requests and Click.
 Clone the repo and run
 
     pip install --editable .
@@ -117,4 +117,4 @@ Clone, install as above,
 
 Start coding!  Your changes will take immediate effect.
 
-Author: Lucas Roesler <lucas@eventboard.io>
+Author: Lucas Roesler <lucas.roesler@teem.com>

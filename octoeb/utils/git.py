@@ -129,6 +129,7 @@ def changelog(log, ticket_ids=False):
     else:
         jira_issues = set(jira_issues)
         for i, m in enumerate(changelog):
+            logger.debug('Changloe: {}, {}'.format(i, m))
             # m[0] is the issue id
             # m[1] is the issue title
             changelog[i] = u'* {} : {}'.format(
