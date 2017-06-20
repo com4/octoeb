@@ -244,8 +244,8 @@ class JiraAPI(object):
     def get_release_notes(self, version_id, project_id):
         logger.debug('JiraAPI.get_release_notes')
         path = (
-            '{}secure/ReleaseNote.jspa?version={}&styleName=Text&projectId={}'
-        ).format('https://eventboard.atlassian.net/', version_id, project_id)
+            '{}/secure/ReleaseNote.jspa?version={}&styleName=Text&projectId={}'
+        ).format(self.base_path, version_id, project_id)
 
         resp = requests.get(path, auth=self.auth)
 
