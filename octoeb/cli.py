@@ -163,7 +163,7 @@ def validate_ticket_arg_or_pull_from_branch(ctx, param, name):
     expose_value=False,
     callback=set_logging,
     type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']))
-@click.version_option('1.2')
+@click.version_option('1.4')
 @click.pass_context
 def cli(ctx):
     """Eventboard releases script"""
