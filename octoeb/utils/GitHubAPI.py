@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 import logging
+import re
 
 import requests
 
@@ -14,6 +15,11 @@ from octoeb.utils.formatting import extract_release_branch_version
 
 
 logger = logging.getLogger(__name__)
+
+RELEASE_TICKET_ID_RE = re.compile(
+    r'^release ticket id: ([a-z0-9-]*)$',
+    re.I | re.M
+)
 
 
 class DuplicateBranchError(Exception):
@@ -95,6 +101,16 @@ class GitHubAPI(object):
             resp.raise_for_status()
 
         return resp.json()
+
+    def get_release_ticket_key_for_tag(self, name):
+        try:
+            resp = self.get_release(name)
+            return RELEASE_TICKET_ID_RE.search(resp.get('body', '')).group(1)
+        except Exception:
+            logger.error(resp)
+            logger.exception('Failed to get release ticket id')
+
+        return None
 
     def get_branch(self, name, raise_for_status=True):
         resp = self.get('git/refs/heads/{}'.format(name))

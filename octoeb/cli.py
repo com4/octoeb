@@ -61,6 +61,7 @@ import subprocess
 import sys
 
 import click
+from requests.exceptions import RequestException
 
 from octoeb.utils.formatting import build_release_name
 from octoeb.utils.formatting import extract_release_branch_version
@@ -362,42 +363,59 @@ def start_release(ctx, version):
         git.checkout(name)
         log = git.log(
             'mainline/master', 'mainline/{}'.format(name), merges=True)
-        changelog = git.changelog(log)
+        ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
         click.echo('Changelog:')
         click.echo(changelog)
 
         audit = audit_changes('mainline/master', name)
 
-        channel_name = slackify_release_name(name)
+        logger.info('Creating release ticket')
         jira = apis.get('jira')
-
         ticket_project = get_config_value(
             ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_PROJECT', 'MAN')
         ticket_type = get_config_value(
             ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_TYPE', 'RELEASE')
-
         ticket_id, ticket_name = jira.create_issue(
             summary='Release {}'.format(major_version),
-            description='Changelog: \n{}\n\n{}'.format(changelog, audit),
+            description='Release changes Audit:\n{{code}}{}{{code}}'.format(audit),
             type=ticket_type, project=ticket_project)
-        channel_topic = 'Release Ticket: https://eventboard.atlassian.net/' \
-            'browse/{}'.format(ticket_name)
-
-        channel_text = '{}\n```\n{}\n\n{}\n```'.format(
-            channel_topic, changelog, audit)
-
-        logger.info('Creating slack channel: {}'.format(channel_name))
-
-        group_id = get_config_value(
-            ctx.get('config'), 'slack', 'GROUP_ID', 'S0JT9FNMD')
+        # link release ticket and changelog tickets
+        logger.info('Linking changelog tickets to the release')
+        for change_id in ticket_ids:
+            logger.debug('Linking {} to {}'.format(change_id, ticket_name))
+            try:
+                resp = jira.link_issues(change_id, ticket_name)
+                logger.debug(
+                    'start_release issue link for {} response: {}'.format(
+                        change_id, resp
+                    )
+                )
+            except RequestException as e:
+                logger.error(
+                    'start_release issue link for {} failed with: {}'.format(
+                        change_id, e.response.json()
+                    )
+                )
 
         if apis.get('slack', None):
+            channel_name = slackify_release_name(name)
+            logger.info('Creating slack channel: {}'.format(channel_name))
+
+            channel_topic = (
+                'Release Ticket: https://eventboard.atlassian.net/'
+                'browse/{}'.format(ticket_name)
+            )
+            channel_text = '{}\n```\n{}\n\n{}\n```'.format(
+                channel_topic, changelog, audit)
+            group_id = get_config_value(
+                ctx.get('config'), 'slack', 'GROUP_ID', 'S0JT9FNMD')
+
             create_release_channel(
                 apis.get('slack', None), channel_name,
                 channel_topic, channel_text, group_id)
 
-        qa(ctx, version)
+        qa(ctx, version, release_ticket_key=ticket_name)
 
     except Exception as e:
         print(e.message)
@@ -712,10 +730,22 @@ def review_releasefix(ctx, ticket, version):
 @click.pass_obj
 def start_prerelease(ctx, version):
     """Publish pre-release on GitHub for QA."""
-    qa(ctx, version)
+
+    # Try to determine the Jira ticket for this release by looking up
+    # the initial release changelog
+    base_version = extract_release_branch_version(version)
+    apis = ctx.get('apis')
+    api = apis.get('mainline')
+
+    try:
+        release_ticket_key = api.get_release_ticket_key_for_tag(base_version)
+    except Exception:
+        release_ticket_key = None
+
+    qa(ctx, version, release_ticket_key=release_ticket_key)
 
 
-def qa(ctx, version):
+def qa(ctx, version, release_ticket_key=None):
     """Publish pre-release on GitHub for QA."""
     apis = ctx.get('apis')
     api = apis.get('mainline')
@@ -729,6 +759,38 @@ def qa(ctx, version):
 
         logger.debug('Changelog found:\n{}'.format(changelog))
         changelog = '**Changes:**\n{}'.format(changelog)
+
+        if release_ticket_key is not None:
+            # ensure that the github changelog references the JIRA release
+            # ticket
+            changelog = '{changes}\n\nRelease ticket id: {id}'.format(
+                changes=changelog,
+                id=release_ticket_key,
+            )
+
+            # update the changelog links in jira
+            click.echo('Linking changelog tickets to the {} release'.format(
+                release_ticket_key)
+            )
+            jira = apis.get('jira')
+            with click.progressbar(ticket_ids) as bar:
+                for change_id in bar:
+                    logger.debug('Linking {} to {}'.format(
+                        change_id, release_ticket_key)
+                    )
+                    try:
+                        resp = jira.link_issues(change_id, release_ticket_key)
+                        logger.debug(
+                            'qa issue link for {} response: {}'.format(
+                                change_id, resp
+                            )
+                        )
+                    except RequestException as e:
+                        logger.error(
+                            'qa issue link for {} failed with: {}'.format(
+                                change_id, e.response.json()
+                            )
+                        )
 
     try:
         api.create_pre_release(version, name, body=changelog)
