@@ -2,8 +2,8 @@ OctoEB
 ======
 ![python3](https://caniusepython3.com/check/c87b915f-dfb4-42eb-b0f2-ed5790a049ec.svg?style=flat)
 
-OctoEB is a script to help with the creation of GitHub releases for Teem
-projects.  This is to help us avoid merge, branch, and tag issues. It also
+OctoEB is a script to help with the integration of Gitflow, Github, and Jira.
+This is to help us avoid merge, branch, and tag issues. It also
 simplifies the process so that it is executed the same way by each developer
 each time.
 
@@ -45,6 +45,7 @@ expect this file to contain the following ini-style configuration:
     [slack]
     TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
     GROUP_ID=S1JT6FNQR
+    TOPIC_STR=Release ticket at https://example.atlassian.net/browse/{}
 
     [release]
     PREFIX=Boaty
@@ -53,8 +54,8 @@ expect this file to contain the following ini-style configuration:
 In `repo`
 
 1. OWNER and REPO are https://github.com/OWNER/REPO when you visit a repo on
-   GitHub, so for example https://github.com/enderlabs/eventboard.io gives
-   OWNER=enderlabs and REPO=eventboard.io
+   GitHub, so for example https://github.com/enderlabs/octoeb gives
+   OWNER=enderlabs and REPO=octoeb
 2. The token can be obtained from https://github.com/settings/tokens
 3. USER is your login email for GitHub
 
@@ -116,5 +117,3 @@ Clone, install as above,
     pip install --editable .
 
 Start coding!  Your changes will take immediate effect.
-
-Author: Lucas Roesler <lucas.roesler@teem.com>

@@ -1,11 +1,6 @@
 #! /usr/bin/env python
 """
-Author: Lucas Roesler <lucas@eventboard.io>
-
-OctoEB is a script to help with the creation of GitHub releases for Eventboard
-projects.  This is to help us avoid merge, branch, and tag issues. It also
-simplifies the process so that it is executed the same way by each developer
-each time.
+OctoEB is a script to help with the integration of Gitflow, Github, and Jira.
 
 ## Installation
 The only external library that this tool depends on is Requests.  Clone the
@@ -32,8 +27,8 @@ USER=email@test.com
 ```
 
 1) OWNER and REPO are https://github.com/OWNER/REPO when you vist a repo on
-   GitHub, so for example https://github.com/enderlabs/eventboard.io gives
-   OWNER=enderlabs and REPO=eventboard.io
+   GitHub, so for example https://github.com/enderlabs/octoeb gives
+   OWNER=enderlabs and REPO=octoeb
 2) The token can be obtained from https://github.com/settings/tokens
 3) USER is your login email for GitHub
 
@@ -166,7 +161,7 @@ def validate_ticket_arg_or_pull_from_branch(ctx, param, name):
 @click.version_option('1.4')
 @click.pass_context
 def cli(ctx):
-    """Eventboard releases script"""
+    """CLI main entry point"""
     # Setup the API
     config = get_config()
 
@@ -399,17 +394,17 @@ def start_release(ctx, version):
                 )
 
         if apis.get('slack', None):
+            config = ctx.get('config')
             channel_name = slackify_release_name(name)
             logger.info('Creating slack channel: {}'.format(channel_name))
 
-            channel_topic = (
-                'Release Ticket: https://eventboard.atlassian.net/'
-                'browse/{}'.format(ticket_name)
-            )
+            topic_str = get_config_value(
+                config, 'slack', 'TOPIC_STR', 'Release Ticket: {}')
+            channel_topic = topic_str.format(ticket_name)
             channel_text = '{}\n```\n{}\n\n{}\n```'.format(
                 channel_topic, changelog, audit)
             group_id = get_config_value(
-                ctx.get('config'), 'slack', 'GROUP_ID', 'S0JT9FNMD')
+                config, 'slack', 'GROUP_ID', 'S0JT9FNMD')
 
             create_release_channel(
                 apis.get('slack', None), channel_name,
