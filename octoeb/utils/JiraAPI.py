@@ -41,7 +41,7 @@ class JiraAPI(object):
         logger.debug('JiraAPI.get: {}'.format(path))
         resp = requests.get(self.build_path(path), auth=self.auth, **kwargs)
 
-        logger.debug(resp)
+        logger.debug(resp.text)
 
         if raise_for_status:
             resp.raise_for_status()
@@ -56,12 +56,16 @@ class JiraAPI(object):
             self.build_path(path), auth=self.auth, **kwargs
         )
 
-        logger.debug(resp)
+        logger.debug(resp.text)
 
         if raise_for_status:
             resp.raise_for_status()
 
-        return resp.json()
+        try:
+            return resp.json()
+        except Exception:
+            logger.debug('Non-json response: {}'.format(resp.text))
+            return None
 
     def get_issue(self, id, raise_for_status=True):
         """Returns ticket JSON
@@ -204,6 +208,25 @@ class JiraAPI(object):
             endpoint, json=payload, raise_for_status=raise_for_status)
 
         return resp.get('id'), resp.get('key')
+
+    def link_issues(self, source, target, reason='Blocks', raise_for_status=True):
+        """
+        """
+        endpoint = 'issueLink'
+        # will say `target` is blocked by `source`
+        payload = {
+            'type': {
+                'name': reason,
+            },
+            'inwardIssue': {
+                'key': source,
+            },
+            'outwardIssue': {
+                'key': target,
+            },
+        }
+
+        return self.post(endpoint, json=payload, raise_for_status=raise_for_status)
 
     def start_issue(self, id, raise_for_status=True):
         """Transition the issue to 'Start'"""
