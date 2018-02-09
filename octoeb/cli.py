@@ -96,7 +96,7 @@ def validate_version_arg(ctx, param, version):
     if version is None:
         raise click.BadParameter('Version number is required')
 
-    if re.match(r'^(?:\.?\d+){4,5}$', version):
+    if re.match(r'^(?:\.?\d+){3,5}$', version):
         return version
 
     raise click.BadParameter('Invalid version format: {}'.format(version))
@@ -112,7 +112,7 @@ def validate_version_arg_or_latest_prerelease(ctx, param, version):
 
         logger.debug('Found pre-release version: {}'.format(version))
 
-    if re.match(r'^(?:\.?\d+){4,5}$', version):
+    if re.match(r'^(?:\.?\d+){3,5}$', version):
         return version
 
     raise click.BadParameter('Invalid version format: {}'.format(version))

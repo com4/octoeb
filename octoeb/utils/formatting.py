@@ -46,7 +46,6 @@ def extract_year_week_version(version):
 
 def extract_release_branch_version(version):
     version_nums = version.split('.')[:4]
-    version_nums[-1] = '01'
 
     return '.'.join(version_nums)
 
