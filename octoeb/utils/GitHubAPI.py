@@ -9,7 +9,6 @@ import requests
 
 from octoeb.utils.config import get_config
 from octoeb.utils.formatting import build_release_base_name
-from octoeb.utils.formatting import build_release_name
 from octoeb.utils.formatting import extract_year_week_version
 from octoeb.utils.formatting import extract_release_branch_version
 
@@ -26,6 +25,11 @@ class DuplicateBranchError(Exception):
     pass
 
 
+class GitHubAPIError(Exception):
+    """Raised when there is a non-200 level error from the GitHub API"""
+    pass
+
+
 class GitHubAPI(object):
     DuplicateBranchError = DuplicateBranchError
 
@@ -37,39 +41,67 @@ class GitHubAPI(object):
         self.base = 'https://api.github.com/repos/{}/{}/'.format(owner, repo)
 
     def build_path(self, path):
-        url = '{}{}'.format(self.base, path)
+        """Concatenates the URL for the Github API with the provided path
 
-        logger.debug('GitHubAPI.build_path: {}'.format(url))
-        return url
+        Args:
+            path (str): Path of interest. For example releases/latest
+
+        Returns:
+            str: Fully qualified URL for the Github API resource.
+            E.g. ``https://api.github.com/repos/user/repo/releases/latest/``
+            where user and repo are the username and repository name for the
+            project.
+        """
+        return '{}{}'.format(self.base, path)
+
+    def send_request(self, method, path, *args, **kwargs):
+        """Request the provided ``path`` from Github using the HTTP ``method``
+
+        .. note::
+
+           Additional args and kwargs will be passed to the request. These are
+           used in POST and PATCH requests.
+
+        Args:
+            method (str): The HTTP method for this request. GET, POST, PATCH,
+                DELETE, etc
+            path (str): The resource path for this request.
+                E.g. releases/latest
+
+        Returns:
+            :class:`requests.Response`: The response of the request.
+        """
+        path = self.build_path(path)
+
+        logger.debug('GitHubAPI.send_request: {} {} {} {}'.format(
+            method, path, args, kwargs))
+
+        response = requests.request(
+            method, path, auth=(self.user, self.token), *args, **kwargs)
+
+        if response.status_code > 299:
+            raise GitHubAPIError('Status: {}; Message: {}'.format(
+                    response.status_code, response.json()['message']))
+
+        logger.debug('GitHubAPI.send_request response: {}'.format(
+            response))
+
+        return response
 
     def get(self, path):
-        logger.debug('GitHubAPI.get: {}'.format(path))
-        return requests.get(
-            self.build_path(path),
-            auth=(self.user, self.token)
-        )
+        return self.send_request('GET', path)
 
     def post(self, path, *args, **kwargs):
-        logger.debug('GitHubAPI.post: {} {} {}'.format(path, args, kwargs))
-        return requests.post(
-            self.build_path(path),
-            auth=(self.user, self.token), *args, **kwargs
-        )
+        return self.send_request('POST', path, *args, **kwargs)
 
     def patch(self, path, *args, **kwargs):
-        logger.debug('GitHubAPI.patch: {} {} {}'.format(path, args, kwargs))
-        return requests.patch(
-            self.build_path(path),
-            auth=(self.user, self.token), *args, **kwargs
-        )
+        return self.send_request('PATCH', path, *args, **kwargs)
 
     def releases(self):
         return self.get('releases')
 
     def prereleases(self):
         resp = self.get('releases')
-
-        logger.debug(resp)
 
         try:
             releases = resp.json()
@@ -81,8 +113,6 @@ class GitHubAPI(object):
 
     def latest_release(self):
         resp = self.get('releases/latest')
-
-        logger.debug(resp)
 
         return resp.json()
 
@@ -96,7 +126,6 @@ class GitHubAPI(object):
     def get_release(self, name, raise_for_status=True):
         resp = self.get('releases/tags/{}'.format(name))
 
-        logger.debug(resp)
         if raise_for_status:
             resp.raise_for_status()
 
@@ -115,7 +144,6 @@ class GitHubAPI(object):
     def get_branch(self, name, raise_for_status=True):
         resp = self.get('git/refs/heads/{}'.format(name))
 
-        logger.debug(resp)
         if raise_for_status:
             resp.raise_for_status()
 
@@ -124,7 +152,6 @@ class GitHubAPI(object):
     def compare(self, base, head, raise_for_status=True):
         resp = self.get('compare/{}...{}'.format(base, head))
 
-        logger.debug(resp)
         if raise_for_status:
             resp.raise_for_status()
 

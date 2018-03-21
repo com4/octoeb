@@ -66,7 +66,7 @@ from octoeb.utils import python
 from octoeb.utils import migrations
 from octoeb.utils.config import get_config
 from octoeb.utils.config import get_config_value
-from octoeb.utils.GitHubAPI import GitHubAPI
+from octoeb.utils.GitHubAPI import GitHubAPI, GitHubAPIError
 from octoeb.utils.JiraAPI import JiraAPI
 from octoeb.utils.slack import create_release_channel
 
@@ -89,7 +89,7 @@ def set_logging(ctx, param, level):
     if not isinstance(numeric_level, int):
         raise click.BadParameter('Invalid log level: {}'.format(level))
 
-    logging.basicConfig(level=numeric_level)
+    logger.setLevel(numeric_level)
 
 
 def validate_version_arg(ctx, param, version):
@@ -368,7 +368,7 @@ def start_release(ctx, version):
         logger.info('Creating release ticket')
         jira = apis.get('jira')
         ticket_project = get_config_value(
-            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_PROJECT', 'MAN')
+            ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_PROJECT', 'TEEM')
         ticket_type = get_config_value(
             ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_TYPE', 'RELEASE')
         ticket_id, ticket_name = jira.create_issue(
@@ -838,13 +838,29 @@ def versions(ctx):
     apis = ctx.get('apis')
     api = apis.get('mainline')
 
-    current_release = api.latest_release()
-    current_prerelease = api.latest_prerelease()
+    try:
+        current_release = api.latest_release()
+        click.echo('Release: {}'.format(current_release.get('tag_name')))
+    except GitHubAPIError as e:
+        msg = 'API Error getting current release version: {}'.format(
+            e.message)
 
-    version = current_release.get('tag_name')
+        if logger.level <= logging.DEBUG:
+            raise
+        else:
+            sys.exit(msg)
 
-    click.echo('Release: {}'.format(version))
-    click.echo('Pre-Release: {}'.format(current_prerelease.get('tag_name')))
+    try:
+        current_prerelease = api.latest_prerelease()
+        click.echo('Pre-Release: {}'.format(
+            current_prerelease.get('tag_name')))
+    except GitHubAPIError as e:
+        msg = 'API Error getting current pre-release version: {}'.format(
+            e.message)
+        if logger.level <= logging.DEBUG:
+            raise
+        else:
+            sys.exit(msg)
 
 
 @cli.command('method')
