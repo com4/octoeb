@@ -51,6 +51,7 @@ try:
 except ImportError:
     import configparser as ConfigParser
 import logging
+import logging.config
 import re
 import subprocess
 import sys
@@ -89,7 +90,29 @@ def set_logging(ctx, param, level):
     if not isinstance(numeric_level, int):
         raise click.BadParameter('Invalid log level: {}'.format(level))
 
-    logger.setLevel(numeric_level)
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '[%(levelname)s] %(message)s'
+            },
+        },
+        'handlers': {
+            'default': {
+                'level': 'DEBUG',
+                'formatter': 'standard',
+                'class': 'logging.StreamHandler',
+            },
+        },
+        'loggers': {
+            '': {
+                'handlers': ['default'],
+                'level': '{}'.format(level.upper()),
+                'propagate': True
+            },
+         }
+    })
 
 
 def validate_version_arg(ctx, param, version):

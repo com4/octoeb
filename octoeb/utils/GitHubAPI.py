@@ -183,7 +183,7 @@ class GitHubAPI(object):
         # a 404
         try:
             self.get_branch(name)
-        except requests.exceptions.HTTPError:
+        except GitHubAPIError:
             pass
         else:
             raise DuplicateBranchError(
@@ -277,7 +277,7 @@ class GitHubAPI(object):
 
         try:
             self.get_release(release_name)
-        except requests.exceptions.HTTPError:
+        except GitHubAPIError:
             pass
         else:
             raise Exception(
@@ -323,7 +323,7 @@ class GitHubAPI(object):
 
         Raises:
             - Exception
-            - requests.exceptions.HTTPError
+            - GitHubAPIError
         """
         logger.debug('GitHubAPI.check_release_status args: {}; {}'.format(
             release_name, release_branch)
@@ -337,7 +337,7 @@ class GitHubAPI(object):
                 'master',
                 release_branch
             ).get('status')
-        except requests.exceptions.HTTPError as e:
+        except GitHubAPIError as e:
             logger.debug('HTTPError: {}'.format(e.message))
             if not e.response.status_code == 404:
                 raise e
@@ -374,7 +374,7 @@ class GitHubAPI(object):
 
         try:
             self.get_release(release_name)
-        except requests.exceptions.HTTPError:
+        except GitHubAPIError:
             pass
         else:
             raise Exception(
