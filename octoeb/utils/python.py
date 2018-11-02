@@ -23,8 +23,8 @@ def check_flake8_issues(base_branch='develop', head_branch=None):
             flake8.
 
     Raises:
-        octoeb.utils.git.GitError: we could not get the git-diff of the provided
-            sha range.
+        octoeb.utils.git.GitError: we could not get the git-diff of the
+            provided sha range.
     """
     if head_branch is None:
         sha_range = u'{}..'.format(base_branch)

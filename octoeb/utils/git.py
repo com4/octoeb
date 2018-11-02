@@ -92,8 +92,40 @@ def find_bower_changes(log):
     return re.findall(r'^[AMD].*bower.*', log, flags=re.M)
 
 
-def find_requirements_changes(log):
-    return re.findall(r'^M.*requirements.*', log, flags=re.M)
+def find_requirements_changes(base='master', head=''):
+    try:
+        cmd = ['git', 'diff']
+        cmd.append('{base}..{head}'.format(base=base, head=head))
+        cmd.append('--')
+        cmd.append('requirements.txt')
+        cmd_output = subprocess.check_output(cmd)
+    except subprocess.CalledProcessError:
+        raise ValueError('Could not find diff of requirements. Directory may '
+                         'not be a git repo')
+
+    return re.findall(r'^[\+\-].*', cmd_output, flags=re.M)
+
+
+def find_cron_changes(log):
+    files = None
+    cron_changes = list()
+
+    with open('/dev/null', 'w') as devnull:
+        try:
+            cmd = ['./do', 'get_cron_files']
+            files = subprocess.check_output(cmd, stderr=devnull)
+        except Exception:
+            logger.debug('Error trying to run this thing')
+
+    if files:
+        files_list = files.split('\n')
+        for f in files_list:
+            if f and not f.startswith('DEBUG'):
+                search = r'^[AMD].*' + re.escape(f.strip()) + '.*'
+                if re.findall(search, log, flags=re.M):
+                    cron_changes.append(f)
+
+    return cron_changes
 
 
 def changelog(log, ticket_ids=False):
@@ -149,7 +181,8 @@ def get_deploy_relavent_changes(base, head):
     staticfile_changes = find_staticfile_changes(log_str)
     migration_changes = find_migrations_changes(log_str)
     bower_changes = find_bower_changes(log_str)
-    pip_changes = find_requirements_changes(log_str)
+    pip_changes = find_requirements_changes(base=base, head=head)
+    cron_changes = find_cron_changes(log_str)
 
     if staticfile_changes:
         staticfile_msg = 'Staticfile changes:\n{}'.format(
@@ -169,7 +202,13 @@ def get_deploy_relavent_changes(base, head):
     else:
         pip_msg = 'No pip changes'
 
-    return (staticfile_msg, bower_msg, pip_msg), migration_changes
+    if cron_changes:
+        cron_msg = 'Cron Changes:\n{}'.format(
+            u'\n'.join(cron_changes))
+    else:
+        cron_msg = 'No cron changes'
+
+    return (staticfile_msg, bower_msg, pip_msg, cron_msg), migration_changes
 
 
 @contextmanager
