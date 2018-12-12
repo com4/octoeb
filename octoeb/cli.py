@@ -396,7 +396,8 @@ def start_release(ctx, version):
             ctx.get('config'), 'bugtracker', 'RELEASE_TICKET_TYPE', 'RELEASE')
         ticket_id, ticket_name = jira.create_issue(
             summary='Release {}'.format(major_version),
-            description='Release changes Audit:\n{{code}}{}{{code}}'.format(audit),
+            description='Release changes Audit:\n{{code}}{}{{code}}'
+                        .format(audit),
             type=ticket_type, project=ticket_project)
         # link release ticket and changelog tickets
         logger.info('Linking changelog tickets to the release')
@@ -450,7 +451,8 @@ def start_release(ctx, version):
 
 
 def audit_changes(base, head, txt=False):
-    changes_txt_list, migrations_list = git.get_deploy_relavent_changes(base, head)
+    changes_txt_list, migrations_list = git.get_deploy_relavent_changes(
+        base, head)
     problem_migrations, sql_map = migrations.check_problem_sql(migrations_list)
 
     sql_msgs = []
