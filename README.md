@@ -62,7 +62,7 @@ In `repo`
 In `bugtracker`
 
 1. USER is your login email for JIRA`
-2. TOKEN is your JIRA password
+2. The token can be obtained from https://id.atlassian.com/manage/api-tokens
 3. TICKET_FILTER_ID is the search filter used for tab completion of ticket ids
 4. RELEASE_TICKET_PROJECT is the project the release ticket should be created
    in.  Default is `MAN`
