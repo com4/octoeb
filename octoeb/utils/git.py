@@ -111,11 +111,11 @@ def changelog(log, ticket_ids=False):
     config = get_config()
     changelog_re_pattern = get_config_value(
         config, 'repo', 'changelog_re',
-        "merge pull request #\d+ from .*(?:[/-]([a-z]{2,4}-\d+)-(.*))"
+        "merge pull request #\d+ from [\w/]*(?:[/-]([a-z]{2,4}-\d+)-(.*))"
     )
     issue_re_pattern = get_config_value(
         config, 'repo', 'issue_re',
-        "merge pull request #\d+ from .*(?:[/-]([a-z]+-\d+))")
+        "merge pull request #\d+ from [\w/]*(?:[/-]([a-z]+-\d+))")
 
     issue_re = re.compile(issue_re_pattern, re.I)
     changelog_re = re.compile(changelog_re_pattern, re.I)
