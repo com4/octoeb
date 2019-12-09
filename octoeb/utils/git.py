@@ -112,7 +112,7 @@ def find_cron_changes(log):
 
     with open('/dev/null', 'w') as devnull:
         try:
-            cmd = ['./do', 'get_cron_files']
+            cmd = ['./do', 'get-cron-files']
             files = subprocess.check_output(cmd, stderr=devnull)
         except Exception:
             logger.debug('Error trying to run this thing')
@@ -120,7 +120,7 @@ def find_cron_changes(log):
     if files:
         files_list = files.split('\n')
         for f in files_list:
-            if f and not f.startswith('DEBUG'):
+            if f and f.startswith('apps/'):
                 search = r'^[AMD].*' + re.escape(f.strip()) + '.*'
                 if re.findall(search, log, flags=re.M):
                     cron_changes.append(f)

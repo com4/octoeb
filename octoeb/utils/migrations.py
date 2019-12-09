@@ -16,7 +16,7 @@ issue_re = re.compile(
 changelog_re = re.compile(
     r'merge pull request #\d+ from .*(?:[/-]([a-z]{2,4}-\d+)-(.*))', re.I)
 migrations_info_re = re.compile(
-    r'apps/((.*)/migrations/(\d+[0-9a-z_]*))\.py', re.I)
+    r'apps/((.*)/migrations/(\d+[0-9a-z_-]*))\.py', re.I)
 
 
 def check_for_not_null(sql):
