@@ -67,7 +67,7 @@ class JiraAPI(object):
             logger.debug('Non-json response: {}'.format(resp.text))
             return None
 
-    def get_issue(self, id, raise_for_status=True):
+    def get_issue(self, id, raise_for_status=True, fields=None):
         """Returns ticket JSON
 
         Arguments:
@@ -86,7 +86,11 @@ class JiraAPI(object):
                 id, raise_for_status
             )
         )
+
         endpoint = 'issue/{}'.format(id)
+        if fields:
+            endpoint += '?fields={}'.format(','.join(fields))
+
         return self.get(endpoint, raise_for_status)
 
     def get_filter(self, id, raise_for_status=True):
@@ -263,6 +267,46 @@ class JiraAPI(object):
         logger.debug('JiraAPI.get_issue_summary')
         issue = self.get_issue(id)
         return issue.get('fields').get('summary')
+
+    def is_issue_subtask(self, id):
+        logger.debug('JiraAPI.is_issue_subtask')
+        issue = self.get_issue(
+            id, raise_for_status=False, fields=['issuetype'])
+        return (issue
+                .get('fields', {})
+                .get('issuetype', {})
+                .get('subtask', False))
+
+    def get_issue_details_list(self, ids):
+        logger.debug('JiraAPI.get_issue_details_list')
+        results = set()
+
+        for ticket_id in ids or []:
+            jira_details = self.get_issue_details(ticket_id)
+            if jira_details:
+                results.add(jira_details)
+
+        results = sorted(results)
+        return ('* ' + '\n* '.join(results)) if results else None
+
+    def get_issue_details(self, id):
+        logger.debug('JiraAPI.get_issue_details')
+        issue = self.get_issue(
+            id, raise_for_status=False,
+            fields=['summary', 'issuetype', 'assignee', 'parent'])
+        fields = issue.get('fields', {})
+
+        if not fields:
+            return None
+
+        parent = fields.get('parent', {}).get('key', None)
+        return '{id} : {type} - {summary} ({assignee})'.format(
+            type=fields.get('issuetype').get('name'),
+            id='{} > {}'.format(parent, id) if parent else id,
+            summary=fields.get('summary'),
+            assignee=fields.get('assignee', {}).get(
+                'displayName', 'Unassigned')
+        )
 
     def get_release_notes(self, version_id, project_id):
         logger.debug('JiraAPI.get_release_notes')

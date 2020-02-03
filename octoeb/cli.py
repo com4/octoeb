@@ -402,6 +402,12 @@ def start_release(ctx, version):
         # link release ticket and changelog tickets
         logger.info('Linking changelog tickets to the release')
         for change_id in ticket_ids:
+            if jira.is_issue_subtask(change_id):
+                logger.debug('Skip linking subtask {} to {}'.format(
+                    change_id, ticket_name)
+                )
+                continue
+
             logger.debug('Linking {} to {}'.format(change_id, ticket_name))
             try:
                 resp = jira.link_issues(change_id, ticket_name)
@@ -491,16 +497,32 @@ def audit_changes(base, head, txt=False):
     '-b', '--base',
     default='master',
     help='Name of the branch to compare the history starting from.')
+@click.option(
+    '--jira/--no-jira',
+    default=True,
+    help='Generate JIRA changelog from tickets in git changelog')
 @click.pass_obj
-def changelog(ctx, base, head):
+def changelog(ctx, base, head, jira):
     """Get changelog between base branch and head branch"""
     log = git.log(base, head, merges=True)
     logger.debug(log)
-    ticket_ids, changelog = git.changelog(log, ticket_ids=True)
 
-    click.echo('\nChangelog:\n{changes}\n\nAuditing...'.format(
-        changes=changelog))
-    click.echo('\n{audit}'.format(audit=audit_changes(base, head)))
+    # Git changelog
+    click.echo('\nGit changelog:\n')
+    ticket_ids, changelog = git.changelog(log, ticket_ids=True)
+    click.echo(changelog)
+
+    # JIRA changelog
+    if jira:
+        click.echo('\nJIRA changelog:\n')
+        jira_api = ctx.get('apis').get('jira')
+        jira_changelog = jira_api.get_issue_details_list(ticket_ids)
+        click.echo(jira_changelog)
+
+    # Audit
+    click.echo('\nAudit:\n')
+    audit = audit_changes(base, head)
+    click.echo(audit)
 
 
 @start.command('hotfix')
@@ -795,6 +817,12 @@ def qa(ctx, version, release_ticket_key=None):
             jira = apis.get('jira')
             with click.progressbar(ticket_ids) as bar:
                 for change_id in bar:
+                    if jira.is_issue_subtask(change_id):
+                        logger.debug('Skip linking subtask {} to {}'.format(
+                            change_id, release_ticket_key)
+                        )
+                        continue
+
                     logger.debug('Linking {} to {}'.format(
                         change_id, release_ticket_key)
                     )
