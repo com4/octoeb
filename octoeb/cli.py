@@ -46,8 +46,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import six
 try:
-    import ConfigParser
+    import six.moves.configparser
 except ImportError:
     import configparser as ConfigParser
 import logging
@@ -216,7 +217,7 @@ def cli(ctx):
         try:
             ctx.obj['apis']['slack'] = slacker.Slacker(
                 config.get('slack', 'TOKEN'))
-        except ConfigParser.NoSectionError:
+        except six.moves.configparser.NoSectionError:
             pass
 
 
@@ -463,7 +464,7 @@ def audit_changes(base, head, txt=False):
 
     sql_msgs = []
     # Print out the SQL for the "non problem" migrations
-    for migration, sql in sql_map.iteritems():
+    for migration, sql in six.iteritems(sql_map):
         if migration in problem_migrations:
             alert = (
                 u'\\033[0;31m{m} could break backwards compatibility\033[0m'

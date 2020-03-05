@@ -8,7 +8,7 @@ import os
 import sys
 
 try:
-    import ConfigParser
+    import six.moves.configparser
 except ImportError:
     import configparser as ConfigParser
 
@@ -30,7 +30,7 @@ def get_config(validate=True):
         logger.debug('Config from cache')
         return cached_config
 
-    config = ConfigParser.ConfigParser()
+    config = six.moves.configparser.ConfigParser()
     config.read([
         os.path.expanduser('~/.config/octoeb'),
         os.path.expanduser('~/.octoebrc'),
@@ -65,7 +65,7 @@ def get_config_value(config, section, option, default=None):
         s=section, o=option, d=default))
     try:
         return config.get(section, option)
-    except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+    except (six.moves.configparser.NoSectionError, six.moves.configparser.NoOptionError):
         logger.debug('Return default value')
         return default
 
