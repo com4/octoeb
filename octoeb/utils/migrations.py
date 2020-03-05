@@ -88,7 +88,8 @@ def check_problem_sql(migrations_list):
             try:
                 cmd = ('./do', 'manage', 'sqlmigrate', app, name)
                 # dump the error/logging output to null
-                sql = subprocess.check_output(cmd, stderr=devnull)
+                sql = subprocess.check_output(cmd, stderr=devnull,
+                                              universal_newlines=True)
             except subprocess.CalledProcessError:
                 logger.debug('Error trying to run: {}'.format(cmd))
                 continue

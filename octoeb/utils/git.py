@@ -44,13 +44,13 @@ def log_messages(base='develop', head='', number=None):
     cmd.append('{base}...'.format(base=base))
     try:
         logger.debug(u'Running: {}'.format(cmd))
-        return subprocess.check_output(cmd)
+        return subprocess.check_output(cmd, universal_newlines=True)
     except subprocess.CalledProcessError:
         raise ValueError('Can not generate log messages.')
 
 
 def log(base='master', head='', directory=None, merges=False):
-    """Retrun simple git log.
+    """Return simple git log.
 
     Args:
         base (str): base branch or sha to compare with.
@@ -74,7 +74,7 @@ def log(base='master', head='', directory=None, merges=False):
 
         cmd.append('{base}..{head}'.format(base=base, head=head))
         logger.debug(u'Running: {}'.format(cmd))
-        return subprocess.check_output(cmd)
+        return subprocess.check_output(cmd, universal_newlines=True)
     except subprocess.CalledProcessError:
         raise ValueError(
             'Can not find the git log, directory may not be a repo')
@@ -98,7 +98,7 @@ def find_requirements_changes(base='master', head=''):
         cmd.append('{base}..{head}'.format(base=base, head=head))
         cmd.append('--')
         cmd.append('requirements.txt')
-        cmd_output = subprocess.check_output(cmd)
+        cmd_output = subprocess.check_output(cmd, universal_newlines=True)
     except subprocess.CalledProcessError:
         raise ValueError('Could not find diff of requirements. Directory may '
                          'not be a git repo')
@@ -113,7 +113,8 @@ def find_cron_changes(log):
     with open('/dev/null', 'w') as devnull:
         try:
             cmd = ['./do', 'get-cron-files']
-            files = subprocess.check_output(cmd, stderr=devnull)
+            files = subprocess.check_output(cmd, stderr=devnull,
+                                            universal_newlines=True)
         except Exception:
             logger.debug('Error trying to run this thing')
 
@@ -222,14 +223,14 @@ def on_branch(name, remote_name='mainline'):
     the original branch and pop any stashed work.
     """
     # store the current branch info
-    org_branch = subprocess.check_output([
-        'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-    ])
+    org_branch = subprocess.check_output(
+        ['git', 'rev-parse', '--abbrev-ref', 'HEAD'], universal_newlines=True)
     org_branch = org_branch.strip()
     logger.debug('current branch name: {}'.format(org_branch))
 
     logger.debug('stashing current branch')
-    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = subprocess.check_output(
+        ['git', 'stash', 'create', '-q'], universal_newlines=True)
     stash_ref = stash_ref.strip()
 
     if stash_ref:

@@ -7,10 +7,7 @@ import logging
 import os
 import sys
 
-try:
-    import six.moves.configparser
-except ImportError:
-    import configparser as ConfigParser
+import six
 
 
 logger = logging.getLogger(__name__)
