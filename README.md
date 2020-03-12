@@ -13,10 +13,15 @@ The goal is to make this git branching strategy as semantic as possible on the c
 ![Teem Git Flow](https://s3-us-west-2.amazonaws.com/eventboard-docs/Teem+GitFlow+-+Page+1.png)
 
 ## Installation
-The only external libraries that this tool depends on is Requests and Click.
 Clone the repo and run
 
-    pip install --editable .
+    pip install -r requirements.txt
+    
+Alternatively, if you want to install octoeb globally without having to worry
+about virtual environments or global dependency conflicts, you can install with
+[pipx](https://pypi.org/project/pipx/). Run pipx from *outside* the repo directory:
+    
+    cd / && pipx install --editable /path/to/octoeb
 
 To verify the install, start a new shell and run
 
@@ -112,8 +117,5 @@ to the beginning of your `zshrc`.
 
 
 ## Developing
-Clone, install as above,
-
-    pip install --editable .
-
-Start coding!  Your changes will take immediate effect.
+Clone, install as directed above, and start coding! Your changes will take
+immediate effect.

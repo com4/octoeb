@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import logging
 import re
 import subprocess
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,8 @@ def check_problem_sql(migrations_list):
             try:
                 cmd = ('./do', 'manage', 'sqlmigrate', app, name)
                 # dump the error/logging output to null
-                sql = subprocess.check_output(cmd, stderr=devnull)
+                sql = subprocess.check_output(cmd, stderr=devnull,
+                                              universal_newlines=True)
             except subprocess.CalledProcessError:
                 logger.debug('Error trying to run: {}'.format(cmd))
                 continue
@@ -95,7 +97,7 @@ def check_problem_sql(migrations_list):
                 sql_map[x] = sql
 
     problem_migrations = {}
-    for migration, sql in sql_map.iteritems():
+    for migration, sql in six.iteritems(sql_map):
         # check for problem migrations by applying each backwards compatibility
         # check
         errors = []

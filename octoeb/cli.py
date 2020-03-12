@@ -46,10 +46,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    import ConfigParser
-except ImportError:
-    import configparser as ConfigParser
 import logging
 import logging.config
 import re
@@ -58,6 +54,7 @@ import sys
 
 import click
 from requests.exceptions import RequestException
+import six
 
 from octoeb.utils.formatting import build_release_name
 from octoeb.utils.formatting import extract_release_branch_version
@@ -156,9 +153,9 @@ def validate_ticket_arg_or_pull_from_branch(ctx, param, name):
     """Verify issue id format and return issue slug"""
     if name is None:
         logger.debug('Ticket id not provided, search the current branch')
-        branch_name = subprocess.check_output([
-            'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-        ])
+        branch_name = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            universal_newlines=True)
         name_result = re.match(
             r'^[a-zA-Z]+-?/?([a-zA-Z]+-\d+).*', branch_name.strip())
         if name_result is None:
@@ -216,7 +213,7 @@ def cli(ctx):
         try:
             ctx.obj['apis']['slack'] = slacker.Slacker(
                 config.get('slack', 'TOKEN'))
-        except ConfigParser.NoSectionError:
+        except six.moves.configparser.NoSectionError:
             pass
 
 
@@ -235,7 +232,8 @@ def sync(ctx):
     #       configurable.  In fact, it would be good if we could do this for
     #       more branches.
     logger.debug('stashing current branch')
-    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = subprocess.check_output(
+        ['git', 'stash', 'create', '-q'], universal_newlines=True)
     stash_ref = stash_ref.strip()
 
     if stash_ref:
@@ -244,9 +242,9 @@ def sync(ctx):
         subprocess.call(['git', 'reset', '--hard'])
 
     try:
-        org_branch = subprocess.check_output([
-            'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-        ])
+        org_branch = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            universal_newlines=True)
         org_branch = org_branch.strip()
         logger.debug('current branch name: {}'.format(org_branch))
 
@@ -295,9 +293,8 @@ def update(ctx, base):
         None
     """
     # get the current branch name
-    current_branch = subprocess.check_output([
-        'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-    ])
+    current_branch = subprocess.check_output(
+        ['git', 'rev-parse', '--abbrev-ref', 'HEAD'], universal_newlines=True)
     current_branch = current_branch.strip()
     logger.debug('current branch: {}'.format(current_branch))
 
@@ -318,7 +315,8 @@ def update(ctx, base):
     logger.debug('Base branch determined as: {}'.format(base_branch))
 
     logger.debug('stashing current branch')
-    stash_ref = subprocess.check_output(['git', 'stash', 'create', '-q'])
+    stash_ref = subprocess.check_output(
+        ['git', 'stash', 'create', '-q'], universal_newlines=True)
     stash_ref = stash_ref.strip()
 
     if stash_ref:
@@ -463,7 +461,7 @@ def audit_changes(base, head, txt=False):
 
     sql_msgs = []
     # Print out the SQL for the "non problem" migrations
-    for migration, sql in sql_map.iteritems():
+    for migration, sql in six.iteritems(sql_map):
         if migration in problem_migrations:
             alert = (
                 u'\\033[0;31m{m} could break backwards compatibility\033[0m'
