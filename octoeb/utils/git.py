@@ -98,6 +98,7 @@ def find_requirements_changes(base='master', head=''):
         cmd.append('{base}..{head}'.format(base=base, head=head))
         cmd.append('--')
         cmd.append('requirements.txt')
+        cmd.append('requirements-py3.txt')  # Monolith uses py3 file now
         cmd_output = subprocess.check_output(cmd, universal_newlines=True)
     except subprocess.CalledProcessError:
         raise ValueError('Could not find diff of requirements. Directory may '
