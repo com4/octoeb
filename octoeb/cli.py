@@ -938,7 +938,7 @@ def call_method(ctx, target, method_name, method_args):
         click.echo(getattr(api, method_name)(*method_args))
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(str(e))
 
 
 @cli.command('jira')
