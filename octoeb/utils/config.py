@@ -40,7 +40,7 @@ def get_config(validate=True):
     try:
         validate_config(config)
     except Exception as e:
-        sys.exit('ERROR: {}'.format(e.message))
+        sys.exit('ERROR: {}'.format(str(e)))
 
     CACHE['config'] = config
 

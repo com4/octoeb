@@ -29,7 +29,7 @@ def build_release_name(config, version):
 
 
 def slackify_release_name(release_name):
-    return release_name.replace('-', '_').replace('.', '_')
+    return release_name.replace('.', '-')
 
 
 def extract_major_version(version):

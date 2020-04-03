@@ -304,7 +304,7 @@ class JiraAPI(object):
             type=fields.get('issuetype').get('name'),
             id='{} > {}'.format(parent, id) if parent else id,
             summary=fields.get('summary'),
-            assignee=fields.get('assignee', {}).get(
+            assignee=(fields.get('assignee') or {}).get(
                 'displayName', 'Unassigned')
         )
 

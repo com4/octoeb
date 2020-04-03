@@ -49,6 +49,7 @@ expect this file to contain the following ini-style configuration:
 
     [slack]
     TOKEN=xoxp-2343453243234-23423-234-aefeafaefaef
+    CHANNEL_PREFIX=teem-
     GROUP_ID=S1JT6FNQR
     TOPIC_STR=Release ticket at https://example.atlassian.net/browse/{}
 
