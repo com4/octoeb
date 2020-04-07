@@ -338,7 +338,7 @@ class GitHubAPI(object):
                 release_branch
             ).get('status')
         except GitHubAPIError as e:
-            logger.debug('HTTPError: {}'.format(e.message))
+            logger.debug('HTTPError: {}'.format(str(e)))
             if not e.response.status_code == 404:
                 raise e
         else:

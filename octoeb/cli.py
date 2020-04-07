@@ -366,13 +366,13 @@ def start_release(ctx, version):
         major_version = extract_release_branch_version(version)
         name = build_release_name(ctx['config'], major_version)
         branch = api.create_release_branch(name)
-    except GitHubAPI.DuplicateBranchError as e:
+    except GitHubAPI.DuplicateBranchError:
         git.fetch('mainline')
         git.checkout(name)
         branch = api.get_branch(name)
         logger.debug('Branch already started')
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     try:
         git.fetch('mainline')
@@ -423,7 +423,10 @@ def start_release(ctx, version):
 
         if apis.get('slack', None):
             config = ctx.get('config')
-            channel_name = slackify_release_name(name)
+            channel_prefix = get_config_value(
+                config, 'slack', 'CHANNEL_PREFIX', 'teem-')
+            channel_name = '{}{}'.format(
+                channel_prefix, slackify_release_name(name))
             logger.info('Creating slack channel: {}'.format(channel_name))
 
             topic_str = get_config_value(
@@ -431,8 +434,7 @@ def start_release(ctx, version):
             channel_topic = topic_str.format(ticket_name)
             channel_text = '{}\n```\n{}\n\n{}\n```'.format(
                 channel_topic, changelog, audit)
-            group_id = get_config_value(
-                config, 'slack', 'GROUP_ID', 'S0JT9FNMD')
+            group_id = get_config_value(config, 'slack', 'GROUP_ID')
 
             create_release_channel(
                 apis.get('slack', None), channel_name,
@@ -441,8 +443,8 @@ def start_release(ctx, version):
         qa(ctx, version, release_ticket_key=ticket_name)
 
     except Exception as e:
-        print(e.message)
-        sys.exit(e.message)
+        print(e)
+        sys.exit(e)
     finally:
         click.echo('Branch: {} created'.format(name))
         click.echo(branch.get('url'))
@@ -542,7 +544,7 @@ def start_hotfix(ctx, ticket):
         git.checkout(name)
         sys.exit('Branch already started')
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
@@ -574,7 +576,7 @@ def start_releasefix(ctx, version, ticket):
         base_release_branch = api.get_branch(release_name)
         release_sha = base_release_branch['object']['sha']
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     # create or sync the release branch on the fork
     try:
@@ -582,7 +584,7 @@ def start_releasefix(ctx, version, ticket):
     except GitHubAPI.DuplicateBranchError as e:
         fork.update_branch(release_name, release_sha)
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     # creak the releasefix branch
     try:
@@ -593,7 +595,7 @@ def start_releasefix(ctx, version, ticket):
         git.checkout(name)
         sys.exit('Branch already started')
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
@@ -621,7 +623,7 @@ def start_feature(ctx, ticket):
         git.checkout(name)
         sys.exit('Branch already started')
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
     click.echo('Branch: {} created'.format(name))
     click.echo(branch.get('url'))
@@ -648,7 +650,7 @@ def review_flake8(ctx, branch):
     try:
         issues = python.check_flake8_issues(branch)
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
     else:
         # note that issues can be the empty string or the list of flake8 issues
         # if it is the empty string, sys.exit will exit with status code 0,
@@ -673,7 +675,7 @@ def review_feature(ctx, ticket):
         summary = jira.get_issue_summary(ticket)
         slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
     else:
         fix_branch = 'feature-{}'.format(slug)
 
@@ -685,7 +687,7 @@ def review_feature(ctx, ticket):
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 @review.command('hotfix')
@@ -705,7 +707,7 @@ def review_hotfix(ctx, ticket):
         summary = jira.get_issue_summary(ticket)
         slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
     else:
         fix_branch = 'hotfix-{}'.format(slug)
 
@@ -718,7 +720,7 @@ def review_hotfix(ctx, ticket):
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 @review.command('releasefix')
@@ -746,7 +748,7 @@ def review_releasefix(ctx, ticket, version):
         summary = jira.get_issue_summary(ticket)
         slug = jira.get_issue_slug(ticket, summary)
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
     else:
         fix_branch = 'releasefix-{}'.format(slug)
 
@@ -759,7 +761,7 @@ def review_releasefix(ctx, ticket, version):
         click.launch(resp.get('html_url'))
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 @cli.command('qa')
@@ -842,7 +844,7 @@ def qa(ctx, version, release_ticket_key=None):
         api.create_pre_release(version, name, body=changelog)
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 @cli.command()
@@ -879,7 +881,7 @@ def release(ctx, version):
         )
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 @cli.command()
@@ -894,7 +896,7 @@ def versions(ctx):
         click.echo('Release: {}'.format(current_release.get('tag_name')))
     except GitHubAPIError as e:
         msg = 'API Error getting current release version: {}'.format(
-            e.message)
+            str(e))
 
         if logger.level <= logging.DEBUG:
             raise
@@ -907,7 +909,7 @@ def versions(ctx):
             current_prerelease.get('tag_name')))
     except GitHubAPIError as e:
         msg = 'API Error getting current pre-release version: {}'.format(
-            e.message)
+            str(e))
         if logger.level <= logging.DEBUG:
             raise
         else:
@@ -938,7 +940,7 @@ def call_method(ctx, target, method_name, method_args):
         click.echo(getattr(api, method_name)(*method_args))
         sys.exit()
     except Exception as e:
-        sys.exit(str(e))
+        sys.exit(e)
 
 
 @cli.command('jira')
@@ -960,7 +962,7 @@ def call_jira_method(ctx, method_name, method_args):
         click.echo(getattr(jira, method_name)(*method_args))
         sys.exit()
     except Exception as e:
-        sys.exit(e.message)
+        sys.exit(e)
 
 
 if __name__ == '__main__':

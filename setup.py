@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='octoeb',
-    version='1.4.2',
+    version='1.4.3',
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
