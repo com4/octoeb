@@ -86,7 +86,8 @@ def check_problem_sql(migrations_list):
                 continue
 
             try:
-                cmd = ('./do', 'manage', 'sqlmigrate', app, name)
+                cmd = ('docker-compose', 'exec', 'web', './manage.py',
+                       'sqlmigrate', app, name)
                 # dump the error/logging output to null
                 sql = subprocess.check_output(cmd, stderr=devnull,
                                               universal_newlines=True)

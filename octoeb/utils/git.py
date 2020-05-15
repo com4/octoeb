@@ -113,7 +113,8 @@ def find_cron_changes(log):
 
     with open('/dev/null', 'w') as devnull:
         try:
-            cmd = ['./do', 'get-cron-files']
+            cmd = ['docker-compose', 'exec', 'web', './manage.py',
+                   'get_cron_filepaths']
             files = subprocess.check_output(cmd, stderr=devnull,
                                             universal_newlines=True)
         except Exception:
@@ -180,6 +181,7 @@ def changelog(log, ticket_ids=False):
 
 def get_deploy_relavent_changes(base, head):
     log_str = log(base, head)
+
     staticfile_changes = find_staticfile_changes(log_str)
     migration_changes = find_migrations_changes(log_str)
     bower_changes = find_bower_changes(log_str)
